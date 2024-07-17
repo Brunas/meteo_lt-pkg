@@ -9,14 +9,6 @@ class Coordinates:
     latitude: float
     longitude: float
 
-    @classmethod
-    def from_dict(cls, data: dict):
-        """Convert from dict"""
-        return cls(
-            latitude=float(data['latitude']),
-            longitude=float(data['longitude'])
-        )
-
 @dataclass
 class Place:
     """Places"""

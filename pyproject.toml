@@ -5,7 +5,7 @@ description = "A library to fetch weather data from api.meteo.lt"
 authors = ["Brunas <brunonas@gmail.com>"]
 license = "MIT"
 readme = "README.md"
-packages = [{include = "meteo_lt-pkg"}]
+packages = [{include = "meteo_lt"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -15,6 +15,7 @@ aiohttp = "^3.9.5"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.4"
+pytest-cov = "^2.12"
 
 [build-system]
 requires = ["poetry-core"]

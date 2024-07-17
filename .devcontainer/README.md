@@ -7,7 +7,7 @@ _The easiest way to contribute to and/or test this repository._
 - [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
 - [docker](https://docs.docker.com/install/)
 - [VS Code](https://code.visualstudio.com/)
-- [Remote - Containers (VSC Extention)](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
+- [Dev Containers (VS Code Extention)](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
 
 [More info about requirements and devcontainer in general](https://code.visualstudio.com/docs/remote/containers#_getting-started)
 
@@ -20,9 +20,7 @@ _The easiest way to contribute to and/or test this repository._
 
 When you open this repository with VSCode and your computer meets the requirements you are asked to "Reopen in Container", do that.
 
-![reopen](images/reopen.png)
-
-If you don't see this notification, open the command pallet (ctrl+shift+p) and select `Remote-Containers: Reopen Folder in Container`.
+If you don't see this notification, open the command pallet (ctrl+shift+p) and select `Dev Containers: Reopen Folder in Container`.
 
 _It will now build the devcontainer._
 
@@ -32,18 +30,14 @@ The container have some "tasks" to help you testing your changes.
 
 _Start "tasks" by opening the the command pallet (ctrl+shift+p) and select `Tasks: Run Task`_
 
-
 ### Run tests
 
-Will run pypi tests on all tests in the workspace
+Will run unit tests in the workspace
 
-### Run tests with coverege
-Will run pypi tests on all tests in the workspace with code coverege on
+### Run tests with coverage
 
-### Make package
+Will run unit tests in the workspace with code coverage on
 
-Builds the package of the current version stated in the Setup.py file
+### Run tests with coverage and report
 
-### Upload package to pypi
-
-Uploads all built packages to pypi, please provide credentials in terminal window
+Will run unit tests in the workspace with code coverage and generated report on

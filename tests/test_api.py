@@ -1,13 +1,15 @@
 """Unit tests"""
+
 import unittest
 from meteo_lt.api import MeteoLtAPI
 
+
 class TestMeteoLtAPI(unittest.IsolatedAsyncioTestCase):
     """API test class"""
+
     async def asyncSetUp(self):
         """Test setup"""
         self.meteo_lt_api = MeteoLtAPI()
-        await self.meteo_lt_api.fetch_places()
 
     async def test_get_nearest_place(self):
         """Test nearest place"""
@@ -20,7 +22,10 @@ class TestMeteoLtAPI(unittest.IsolatedAsyncioTestCase):
         place_code = "lapes"  # Use a real place code
         forecast = await self.meteo_lt_api.get_forecast(place_code)
         self.assertIsNotNone(forecast)
+        self.assertIsNotNone(forecast.current_conditions)
         print(forecast)
+        print(forecast.current_conditions)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,12 +1,15 @@
 """Main API class script"""
+
 import aiohttp
 from scipy.spatial import KDTree
 import numpy as np
 
 from .models import Place, Forecast
 
+
 class MeteoLtAPI:
     """Main API class"""
+
     BASE_URL = "https://api.meteo.lt/v1"
     TIMEOUT = 30
     ENCODING = "utf-8"
@@ -17,7 +20,8 @@ class MeteoLtAPI:
     async def fetch_places(self):
         """Gets all places from API"""
         async with aiohttp.ClientSession(
-            timeout=aiohttp.ClientTimeout(total=self.TIMEOUT)) as session:
+            timeout=aiohttp.ClientTimeout(total=self.TIMEOUT)
+        ) as session:
             async with session.get(f"{self.BASE_URL}/places") as response:
                 response.raise_for_status()
                 response.encoding = self.ENCODING
@@ -38,9 +42,11 @@ class MeteoLtAPI:
     async def get_forecast(self, place_code):
         """Retrieves forecast data from API"""
         async with aiohttp.ClientSession(
-            timeout=aiohttp.ClientTimeout(total=self.TIMEOUT)) as session:
+            timeout=aiohttp.ClientTimeout(total=self.TIMEOUT)
+        ) as session:
             async with session.get(
-                f"{self.BASE_URL}/places/{place_code}/forecasts/long-term") as response:
+                f"{self.BASE_URL}/places/{place_code}/forecasts/long-term"
+            ) as response:
                 response.raise_for_status()
                 response.encoding = self.ENCODING
                 response_json = await response.json()

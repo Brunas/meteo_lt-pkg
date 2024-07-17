@@ -1,7 +1,7 @@
 {
     "name": "Python Poetry DevContainer",
     "dockerFile": "Dockerfile",
-    "context": "../..",
+    "context": "..",
     "settings": {
       "python.pythonPath": "/workspace/.venv/bin/python"
     },
@@ -10,6 +10,13 @@
       "ms-python.vscode-pylance",
       "redhat.vscode-yaml"
     ],
-    "postCreateCommand": "poetry install"
-  }
-  
+    "postCreateCommand": "poetry install",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "ms-python.vscode-pylance"
+            ]
+        }
+    }
+}
