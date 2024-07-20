@@ -19,6 +19,10 @@ pytest-cov = "^2.12"
 
 [tool.poetry.group.dev.dependencies]
 twine = "^5.1.1"
+bumpversion = "^0.6.0"
+
+[tool.poetry.scripts]
+bump-build = "bump_build:main"
 
 [build-system]
 requires = ["poetry-core"]
