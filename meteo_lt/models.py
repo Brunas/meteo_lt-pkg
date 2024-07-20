@@ -76,9 +76,9 @@ def from_dict(cls, data: dict):
         elif isinstance(value, list) and hasattr(f.type.__args__[0], 'from_dict'):
             value = [from_dict(f.type.__args__[0], item) for item in value]
         elif f.name == 'datetime':
-            # Ensure the datetime string is in the correct format
-            dt = datetime.fromisoformat(value).astimezone(timezone.utc)
-            value = dt.strftime('%Y-%m-%dT%H:%M:%S%z')
+            # Convert datetime to ISO 8601 format
+            dt = datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
+            value = dt.isoformat() + 'Z'
 
         init_args[f.name] = value
     return cls(**init_args)

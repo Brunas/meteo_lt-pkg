@@ -1,7 +1,9 @@
 """Models unit tests"""
 
+from datetime import datetime
 import unittest
 from meteo_lt.models import Coordinates, Forecast, ForecastTimestamp, Place
+
 
 class TestMeteoLtModels(unittest.TestCase):
     """Models test class"""
@@ -17,7 +19,7 @@ class TestMeteoLtModels(unittest.TestCase):
         )
         self.forecast_timestamps = [
             ForecastTimestamp(
-                datetime="2024-07-17T14:00:00+0000",
+                datetime="2024-07-17T14:00:00Z",
                 temperature=27,
                 apparent_temperature=27.9,
                 condition_code="partly-cloudy",
@@ -30,7 +32,7 @@ class TestMeteoLtModels(unittest.TestCase):
                 precipitation=0,
             ),
             ForecastTimestamp(
-                datetime="2024-07-17T15:00:00+0000",
+                datetime="2024-07-17T15:00:00Z",
                 temperature=29,
                 apparent_temperature=30.9,
                 condition_code="clear",
@@ -71,3 +73,30 @@ class TestMeteoLtModels(unittest.TestCase):
         assert isinstance(coords, Coordinates)
         assert coords.latitude == 54.6872
         assert coords.longitude == 25.2797
+
+    def test_datetime_format(self):
+        """Checking ISO 8601 date format"""
+        # Create an instance of ForecastTimestamp
+        sample_data = {
+            "forecastTimeUtc": "2024-07-20 07:00:00",
+            "airTemperature": 20.5,
+            "feelsLikeTemperature": 21.0,
+            "conditionCode": "clear",
+            "windSpeed": 5.5,
+            "windGust": 7.0,
+            "windDirection": 180,
+            "cloudCover": 25.0,
+            "seaLevelPressure": 1013.25,
+            "relativeHumidity": 60.0,
+            "totalPrecipitation": 0.0,
+        }
+        forecast_timestamp = ForecastTimestamp.from_dict(sample_data)
+
+        # Parse the datetime to ensure it's in ISO 8601 format
+        dt = datetime.fromisoformat(forecast_timestamp.datetime.replace("Z", "+00:00"))
+
+        # Assert that the datetime is in ISO 8601 format
+        self.assertEqual(
+            dt.strftime("%Y-%m-%dT%H:%M:%S%z"),
+            forecast_timestamp.datetime.replace("Z", "+0000"),
+        )

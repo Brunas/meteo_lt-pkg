@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "meteo_lt-pkg"
-version = "0.1.0"
+version = "0.1.1"
 description = "A library to fetch weather data from api.meteo.lt"
 authors = ["Brunas <brunonas@gmail.com>"]
 license = "MIT"
@@ -16,6 +16,9 @@ aiohttp = "^3.9.5"
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.4"
 pytest-cov = "^2.12"
+
+[tool.poetry.group.dev.dependencies]
+twine = "^5.1.1"
 
 [build-system]
 requires = ["poetry-core"]
