@@ -1,7 +1,7 @@
 """Models script"""
 from dataclasses import dataclass, field, fields
 from typing import List
-from datetime import datetime, timezone
+from datetime import datetime
 
 @dataclass
 class Coordinates:
@@ -112,6 +112,6 @@ def map_condition(api_condition):
         'fog': 'fog',
         None: 'exceptional'  # For null or undefined conditions
     }
-    
+
     # Default to 'exceptional' if the condition is not found in the mapping
     return condition_mapping.get(api_condition, 'exceptional')
