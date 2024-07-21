@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "meteo_lt-pkg"
-version = "0.1.3"
+version = "0.1.4"
 description = "A library to fetch weather data from api.meteo.lt"
 authors = ["Brunas <brunonas@gmail.com>"]
 license = "MIT"
