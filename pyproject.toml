@@ -1,0 +1,23 @@
+[project]
+name = "meteo_lt-pkg"
+version = "0.1.5"
+authors = [
+  { name="Brunas", email="brunonas@gmail.com" },
+]
+description = "A library to fetch weather data from api.meteo.lt"
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Development Status :: 4 - Beta",
+]
+
+[project.urls]
+Homepage = "https://github.com/Brunas/meteo_lt-pkg"
+Issues = "https://github.com/Brunas/meteo_lt-pkg/issues"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
