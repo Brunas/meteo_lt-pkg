@@ -6,7 +6,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
-    name="meteo_lt",
+    name="meteo_lt-pkg",
     version="0.1.5",
     description="A library to fetch weather data from api.meteo.lt",
     long_description=long_description,

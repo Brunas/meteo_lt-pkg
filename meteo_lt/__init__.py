@@ -5,7 +5,7 @@ from .models import Coordinates, Place, ForecastTimestamp, Forecast
 
 __all__ = ["MeteoLtAPI", "Coordinates", "Place", "ForecastTimestamp", "Forecast"]
 
-__title__ = "MeteoLtAPI"
+__title__ = "Meteo.Lt"
 __version__ = "0.1.5"
 __author__ = "Brunas"
 __license__ = "MIT"
