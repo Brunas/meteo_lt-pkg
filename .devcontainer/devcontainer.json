@@ -1,22 +1,39 @@
+// See https://aka.ms/vscode-remote/devcontainer.json for format details.
 {
-    "name": "Python Poetry DevContainer",
-    "dockerFile": "Dockerfile",
-    "context": "..",
-    "settings": {
-      "python.pythonPath": "/workspace/.venv/bin/python"
-    },
+	"name": "Meteo.Lt Pkg Dev",
+	"image": "python:3.10-bullseye",
+	"postCreateCommand": "python3 -m pip install -r requirements.txt",
+	"runArgs": [
+		"-e",
+		"GIT_EDTIOR='code --wait'"
+	],
+  "customizations": {
     "extensions": [
       "ms-python.python",
       "ms-python.vscode-pylance",
-      "redhat.vscode-yaml"
+      "ms-toolsai.jupyter",
+      "ms-python.black-formatter",
+      "ms-python.autopep8",
+      "ms-python.pylint",
+      "ms-vscode.remote-containers",
+      "charliermarsh.ruff",
+      "yzhang.markdown-all-in-one",
+      "kevinrose.vsc-python-indent",
+      "keesschollaart.vscode-home-assistant",
+      "donjayamanne.githistory",
+      "mhutchie.git-graph",
+      "mikoz.black-py"
     ],
-    "postCreateCommand": "poetry install",
-    "customizations": {
-        "vscode": {
-            "extensions": [
-                "ms-python.python",
-                "ms-python.vscode-pylance"
-            ]
-        }
+    "settings": {
+      "terminal.integrated.shell.linux": "/bin/bash",
+      "python.pythonPath": "/usr/local/bin/python",
+      "python.linting.pylintEnabled": true,
+      "python.linting.enabled": true,
+      "python.formatting.provider": "black",
+      "editor.formatOnPaste": false,
+      "editor.formatOnSave": true,
+      "editor.formatOnType": true,
+      "files.trimTrailingWhitespace": true
     }
+  }
 }
