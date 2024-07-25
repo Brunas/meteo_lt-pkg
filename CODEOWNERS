@@ -1,0 +1,9 @@
+# This is a comment.
+# Each line is a file pattern followed by one or more owners.
+
+# The '*' pattern will match all files in the repository.
+* @repository-owner
+
+# Specific files or directories can have different owners.
+docs/* @docs-owner
+src/* @src-owner
