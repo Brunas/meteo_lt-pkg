@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+function BuildPackage {
+  echo "Building package..."
+  cd /workspaces/meteo_lt-pkg
+  python meteo_lt-pkg/setup.py sdist
+  echo "Package built!"
+}
+
+function UploadPackage {
+  echo "Uploading package..."
+  twine upload /workspaces/meteo_lt-pkg/dist/*
+  echo "Package built!"
+}

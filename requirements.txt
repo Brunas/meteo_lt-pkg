@@ -1,0 +1,10 @@
+aiohttp>=3.9.5
+scipy>=1.7.1
+black
+coverage
+flake8
+pyflakes
+pylint
+pytest
+pytest-asyncio
+pytest-cov
