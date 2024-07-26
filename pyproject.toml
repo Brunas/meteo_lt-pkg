@@ -14,9 +14,9 @@ classifiers = [
     "Development Status :: 4 - Beta",
 ]
 dependencies = [
-    "aiohttp>=3.9.5",
-    "scipy>=1.14.0",
-    "numpy>=2.0.1",
+    "aiohttp",
+    "scipy",
+    "numpy",
 ]
 
 [project.urls]
@@ -25,15 +25,15 @@ Issues = "https://github.com/Brunas/meteo_lt-pkg/issues"
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=6.2.4",
-    "pytest-cov>=2.12",
+    "pytest",
+    "pytest-cov",
     "pytest-asyncio",
-    "twine>=5.1.1",
     "black",
     "coverage",
     "flake8",
     "pyflakes",
-    "pylint"
+    "pylint",
+    "build"
 ]
 
 [build-system]
