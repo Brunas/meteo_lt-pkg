@@ -1,6 +1,6 @@
 [project]
 name = "meteo_lt-pkg"
-version = "0.1.6"
+version = "0.1.7"
 authors = [
   { name="Brunas", email="brunonas@gmail.com" },
 ]
@@ -13,10 +13,28 @@ classifiers = [
     "Operating System :: OS Independent",
     "Development Status :: 4 - Beta",
 ]
+dependencies = [
+    "aiohttp>=3.9.5",
+    "scipy>=1.14.0",
+    "numpy>=2.0.1",
+]
 
 [project.urls]
 Homepage = "https://github.com/Brunas/meteo_lt-pkg"
 Issues = "https://github.com/Brunas/meteo_lt-pkg/issues"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.2.4",
+    "pytest-cov>=2.12",
+    "pytest-asyncio",
+    "twine>=5.1.1",
+    "black",
+    "coverage",
+    "flake8",
+    "pyflakes",
+    "pylint"
+]
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]

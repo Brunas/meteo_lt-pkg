@@ -1,5 +1,6 @@
 aiohttp>=3.9.5
-scipy>=1.7.1
+numpy>=2.0.1
+scipy>=1.14.0
 black
 coverage
 flake8
