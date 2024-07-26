@@ -1,10 +1,9 @@
 """Main API class script"""
 
 import aiohttp
-from scipy.spatial import KDTree
-import numpy as np
 
 from .models import Place, Forecast
+from .utils import find_nearest_place
 
 
 class MeteoLtAPI:
@@ -32,12 +31,7 @@ class MeteoLtAPI:
         """Finds nearest place using provided coordinates"""
         if not self.places:
             await self.fetch_places()
-        coordinates = np.array(
-            [[place.latitude, place.longitude] for place in self.places]
-        )
-        tree = KDTree(coordinates)
-        _, idx = tree.query([latitude, longitude])
-        return self.places[idx]
+        return find_nearest_place(latitude, longitude, self.places)
 
     async def get_forecast(self, place_code):
         """Retrieves forecast data from API"""

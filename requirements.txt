@@ -1,6 +1,4 @@
 aiohttp
-numpy
-scipy
 black
 coverage
 flake8

@@ -1,6 +1,6 @@
 [project]
 name = "meteo_lt-pkg"
-version = "0.1.7"
+version = "0.2.0"
 authors = [
   { name="Brunas", email="brunonas@gmail.com" },
 ]
@@ -15,8 +15,6 @@ classifiers = [
 ]
 dependencies = [
     "aiohttp",
-    "scipy",
-    "numpy",
 ]
 
 [project.urls]
