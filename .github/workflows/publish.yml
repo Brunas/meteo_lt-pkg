@@ -23,11 +23,13 @@ jobs:
 
     - name: Extract version from release
       id: get_version
-      run: echo "::set-output name=version::${GITHUB_REF#refs/tags/v}"
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
   
     - name: Update pyproject.toml with the new version
       run: |
-        VERSION=${{ steps.get_version.outputs.version }}
+        VERSION=${{ env.VERSION }}
         sed -i "s/^version = \".*\"/version = \"$VERSION\"/" pyproject.toml
       shell: bash
   
