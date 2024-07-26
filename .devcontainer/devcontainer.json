@@ -1,8 +1,8 @@
 // See https://aka.ms/vscode-remote/devcontainer.json for format details.
 {
 	"name": "Meteo.Lt Pkg Dev",
-	"image": "python:3.10-bullseye",
-	"postCreateCommand": "python3 -m pip install -r requirements.txt",
+	"image": "python:3.12-bullseye",
+	"postCreateCommand": "python -m pip install -r requirements.txt",
 	"runArgs": [
 		"-e",
 		"GIT_EDTIOR='code --wait'"
