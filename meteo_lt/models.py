@@ -1,8 +1,8 @@
 """Models script"""
 
 from dataclasses import dataclass, field, fields
+from datetime import datetime, timezone
 from typing import List
-from datetime import datetime
 
 
 @dataclass
@@ -88,8 +88,10 @@ def from_dict(cls, data: dict):
             value = [from_dict(f.type.__args__[0], item) for item in value]
         elif f.name == "datetime":
             # Convert datetime to ISO 8601 format
-            dt = datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
-            value = dt.isoformat() + "Z"
+            dt = datetime.strptime(value, "%Y-%m-%d %H:%M:%S").replace(
+                tzinfo=timezone.utc
+            )
+            value = dt.isoformat()
 
         init_args[f.name] = value
     return cls(**init_args)

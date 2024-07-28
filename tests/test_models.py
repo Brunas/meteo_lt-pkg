@@ -19,7 +19,7 @@ class TestMeteoLtModels(unittest.TestCase):
         )
         self.forecast_timestamps = [
             ForecastTimestamp(
-                datetime="2024-07-17T14:00:00Z",
+                datetime="2024-07-17T14:00:00+00:00",
                 temperature=27,
                 apparent_temperature=27.9,
                 condition_code="partly-cloudy",
@@ -32,7 +32,7 @@ class TestMeteoLtModels(unittest.TestCase):
                 precipitation=0,
             ),
             ForecastTimestamp(
-                datetime="2024-07-17T15:00:00Z",
+                datetime="2024-07-17T15:00:00+00:00",
                 temperature=29,
                 apparent_temperature=30.9,
                 condition_code="clear",
@@ -92,11 +92,8 @@ class TestMeteoLtModels(unittest.TestCase):
         }
         forecast_timestamp = ForecastTimestamp.from_dict(sample_data)
 
-        # Parse the datetime to ensure it's in ISO 8601 format
-        dt = datetime.fromisoformat(forecast_timestamp.datetime.replace("Z", "+00:00"))
-
         # Assert that the datetime is in ISO 8601 format
         self.assertEqual(
-            dt.strftime("%Y-%m-%dT%H:%M:%S%z"),
-            forecast_timestamp.datetime.replace("Z", "+0000"),
+            forecast_timestamp.datetime,
+            sample_data["forecastTimeUtc"].replace(" ", "T") + "+00:00",
         )
