@@ -52,9 +52,9 @@ You can find the nearest place using latitude and longitude coordinates:
 async def find_nearest_place(latitude, longitude):
     nearest_place = await api_client.get_nearest_place(latitude, longitude)
     print(f"Nearest place: {nearest_place.name}")
- 
+
  # Example coordinates for Vilnius, Lithuania
-asyncio.run(find_nearest_place(54.6872, 25.2797)) 
+asyncio.run(find_nearest_place(54.6872, 25.2797))
 ```
 
 Also, if no places are retrieved before, that is done automatically in `get_nearest_place` method.
@@ -70,8 +70,9 @@ async def fetch_forecast(place_code):
     print(f"Current temperature: {current_conditions.temperature}°C")
 
 # Example place code for Vilnius, Lithuania
-asyncio.run(fetch_forecast("vilnius"))  
+asyncio.run(fetch_forecast("vilnius"))
 ```
+>**NOTE** `current_conditions` is the current hour record from the `forecast_timestamps` array. Also, `forecast_timestamps` array has past time records filtered out due to `api.meteo.lt` not doing that automatically.
 
 ## Data Models
 
@@ -107,7 +108,7 @@ Represents a timestamp within the weather forecast, including various weather pa
 from meteo_lt import ForecastTimestamp
 
 forecast_timestamp = ForecastTimestamp(
-    datetime="2024-07-23T12:00:00Z",
+    datetime="2024-07-23T12:00:00+00:00",
     temperature=25.5,
     apparent_temperature=27.0,
     condition_code="clear",
@@ -131,6 +132,7 @@ from meteo_lt import Forecast
 
 forecast = Forecast(
     place=place,
+    forecast_created=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     forecast_timestamps=[forecast_timestamp]
 )
 print(forecast.current_conditions().temperature)

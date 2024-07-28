@@ -62,13 +62,39 @@ class Forecast:
     """Forecast"""
 
     place: Place
+    forecast_created: str = field(metadata={"json_key": "forecastCreationTimeUtc"})
+    current_conditions: ForecastTimestamp
     forecast_timestamps: List[ForecastTimestamp] = field(
         metadata={"json_key": "forecastTimestamps"}
     )
 
-    def current_conditions(self) -> ForecastTimestamp:
-        """Treat first record as current conditions"""
-        return self.forecast_timestamps[0] if self.forecast_timestamps else None
+    def __post_init__(self):
+        """Post-initialization processing."""
+
+        current_hour = datetime.now(timezone.utc).replace(
+            minute=0, second=0, microsecond=0
+        )
+        # Current conditions are equal to current hour record
+        for forecast in self.forecast_timestamps:
+            if (
+                datetime.fromisoformat(forecast.datetime)
+                .astimezone(timezone.utc)
+                .replace(minute=0, second=0, microsecond=0)
+            ) == current_hour:
+                self.current_conditions = forecast
+                break
+
+        # Filter out timestamps that are older than current hour
+        self.forecast_timestamps = [
+            forecast
+            for forecast in self.forecast_timestamps
+            if (
+                datetime.fromisoformat(forecast.datetime)
+                .astimezone(timezone.utc)
+                .replace(minute=0, second=0, microsecond=0)
+            )
+            > current_hour
+        ]
 
 
 def from_dict(cls, data: dict):
@@ -86,7 +112,7 @@ def from_dict(cls, data: dict):
             value = from_dict(f.type, value)
         elif isinstance(value, list) and hasattr(f.type.__args__[0], "from_dict"):
             value = [from_dict(f.type.__args__[0], item) for item in value]
-        elif f.name == "datetime":
+        elif f.name in ("datetime", "forecast_created"):
             # Convert datetime to ISO 8601 format
             dt = datetime.strptime(value, "%Y-%m-%d %H:%M:%S").replace(
                 tzinfo=timezone.utc

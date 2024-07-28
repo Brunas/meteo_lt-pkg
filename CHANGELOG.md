@@ -1,3 +1,13 @@
+## Release 0.2.2
+
+Date: `2024-07-28`
+
+### Changes
+
+- Current hour forecast is current conditions
+- Filtering past hours forecasts out - API doesn't do that automatically
+- Added forecast_created using forecastCreationTimestampUtc
+
 ## Release 0.2.1
 
 Date: `2024-07-28`
