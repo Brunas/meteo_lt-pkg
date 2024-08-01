@@ -4,6 +4,8 @@ from dataclasses import dataclass, field, fields
 from datetime import datetime, timezone
 from typing import List
 
+from .const import CONDITION_MAPPING, COUNTY_MUNICIPALITIES
+
 
 @dataclass
 class Coordinates:
@@ -135,110 +137,13 @@ Forecast.from_dict = classmethod(from_dict)
 
 def map_condition(api_condition):
     """Condition code mapping"""
-    condition_mapping = {
-        "clear": "sunny",
-        "partly-cloudy": "partlycloudy",
-        "cloudy-with-sunny-intervals": "partlycloudy",
-        "cloudy": "cloudy",
-        "thunder": "lightning",
-        "isolated-thunderstorms": "lightning-rainy",
-        "thunderstorms": "lightning-rainy",
-        "heavy-rain-with-thunderstorms": "lightning-rainy",
-        "light-rain": "rainy",
-        "rain": "rainy",
-        "heavy-rain": "pouring",
-        "light-sleet": "snowy-rainy",
-        "sleet": "snowy-rainy",
-        "freezing-rain": "snowy-rainy",
-        "hail": "hail",
-        "light-snow": "snowy",
-        "snow": "snowy",
-        "heavy-snow": "snowy",
-        "fog": "fog",
-        None: "exceptional",  # For null or undefined conditions
-    }
-
     # Default to 'exceptional' if the condition is not found in the mapping
-    return condition_mapping.get(api_condition, "exceptional")
+    return CONDITION_MAPPING.get(api_condition, "exceptional")
 
 
 def get_municipality_county(municipality: str) -> str:
     """Return the county for a given administrative division."""
-    # Define the county to administrative divisions mapping
-    # https://www.infolex.lt/teise/DocumentSinglePart.aspx?AktoId=125125&StrNr=5#
-    county_municipalities = {
-        "Alytaus": [
-            "Alytaus miesto",
-            "Alytaus rajono",
-            "Druskininkų",
-            "Lazdijų rajono",
-            "Varėnos rajono",
-        ],
-        "Kauno": [
-            "Birštono",
-            "Jonavos rajono",
-            "Kaišiadorių rajono",
-            "Kauno miesto",
-            "Kauno rajono",
-            "Kėdainių rajono",
-            "Prienų rajono",
-            "Raseinių rajono",
-        ],
-        "Klaipėdos": [
-            "Klaipėdos rajono",
-            "Klaipėdos miesto",
-            "Kretingos rajono",
-            "Neringos",
-            "Palangos miesto",
-            "Skuodo rajono",
-            "Šilutės rajono",
-        ],
-        "Marijampolės": [
-            "Kalvarijos",
-            "Kazlų Rūdos",
-            "Marijampolės",
-            "Šakių rajono",
-            "Vilkaviškio rajono",
-        ],
-        "Panevėžio": [
-            "Biržų rajono",
-            "Kupiškio rajono",
-            "Panevėžio miesto",
-            "Panevėžio rajono",
-            "Pasvalio rajono",
-            "Rokiškio rajono",
-        ],
-        "Šiaulių": [
-            "Joniškio rajono",
-            "Kelmės rajono",
-            "Pakruojo rajono",
-            "Akmenės rajono",
-            "Radviliškio rajono",
-            "Šiaulių miesto",
-            "Šiaulių rajono",
-        ],
-        "Tauragės": ["Jurbarko rajono", "Pagėgių", "Šilalės rajono", "Tauragės rajono"],
-        "Telšių": ["Mažeikių rajono", "Plungės rajono", "Rietavo", "Telšių rajono"],
-        "Utenos": [
-            "Anykščių rajono",
-            "Ignalinos rajono",
-            "Molėtų rajono",
-            "Utenos rajono",
-            "Visagino",
-            "Zarasų rajono",
-        ],
-        "Vilniaus": [
-            "Elektrėnų",
-            "Šalčininkų rajono",
-            "Širvintų rajono",
-            "Švenčionių rajono",
-            "Trakų rajono",
-            "Ukmergės rajono",
-            "Vilniaus miesto",
-            "Vilniaus rajono",
-        ],
-    }
-    for county, municipalities in county_municipalities.items():
+    for county, municipalities in COUNTY_MUNICIPALITIES.items():
         if municipality.replace(" savivaldybė", "") in municipalities:
             return f"{county} apskritis"
 
