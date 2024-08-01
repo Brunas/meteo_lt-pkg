@@ -13,8 +13,15 @@ class TestMeteoLtAPI(unittest.IsolatedAsyncioTestCase):
 
     async def test_get_nearest_place(self):
         """Test nearest place"""
-        nearest_place = await self.meteo_lt_api.get_nearest_place(54.6872, 25.2797)
+        nearest_place = await self.meteo_lt_api.get_nearest_place(54.97371, 24.00048)
         self.assertIsNotNone(nearest_place)
+        self.assertEqual("Lapės", nearest_place.name)
+        self.assertEqual("lapes", nearest_place.code)
+        self.assertEqual("LT", nearest_place.country_code)
+        self.assertEqual(
+            "Kauno rajono savivaldybė", nearest_place.administrative_division
+        )
+        self.assertEqual("Kauno apskritis", nearest_place.county)
         print(nearest_place)
 
     async def test_get_forecast(self):

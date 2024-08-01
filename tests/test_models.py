@@ -2,7 +2,13 @@
 
 from datetime import datetime, timedelta
 import unittest
-from meteo_lt.models import Coordinates, Forecast, ForecastTimestamp, Place
+from meteo_lt.models import (
+    Coordinates,
+    Forecast,
+    ForecastTimestamp,
+    Place,
+    get_municipality_county,
+)
 
 
 class TestMeteoLtModels(unittest.TestCase):
@@ -13,7 +19,7 @@ class TestMeteoLtModels(unittest.TestCase):
         self.place = Place(
             code="123",
             name="Sample Place",
-            country="Sample Country",
+            country_code="XX",
             administrative_division="Sample Admin Div",
             coordinates=Coordinates(latitude=54.6872, longitude=25.2797),
         )
@@ -144,3 +150,30 @@ class TestMeteoLtModels(unittest.TestCase):
         self.assertIn(self.future_timestamp_1, forecast.forecast_timestamps)
         self.assertIn(self.future_timestamp_2, forecast.forecast_timestamps)
         self.assertNotIn(self.past_timestamp, forecast.forecast_timestamps)
+
+    def test_valid_division(self):
+        """Test that valid divisions return the correct county."""
+        test_cases = {
+            "Alytaus miesto": "Alytaus apskritis",
+            "Birštono": "Kauno apskritis",
+            "Klaipėdos rajono": "Klaipėdos apskritis",
+            "Kalvarijos": "Marijampolės apskritis",
+            "Panevėžio miesto": "Panevėžio apskritis",
+            "Joniškio rajono": "Šiaulių apskritis",
+            "Jurbarko rajono": "Tauragės apskritis",
+            "Mažeikių rajono": "Telšių apskritis",
+            "Anykščių rajono": "Utenos apskritis",
+            "Elektrėnų": "Vilniaus apskritis",
+        }
+
+        for division, expected_county in test_cases.items():
+            with self.subTest(division=division):
+                self.assertEqual(get_municipality_county(division), expected_county)
+
+    def test_invalid_division(self):
+        """Test that invalid divisions return 'Unknown county'."""
+        invalid_divisions = ["Nonexistent Division", "Fake County", "Imaginary Area"]
+
+        for division in invalid_divisions:
+            with self.subTest(division=division):
+                self.assertEqual(get_municipality_county(division), "Unknown county")

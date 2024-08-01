@@ -22,8 +22,9 @@ class Place:
     administrative_division: str = field(
         metadata={"json_key": "administrativeDivision"}
     )
-    country: str
+    country_code: str = field(metadata={"json_key": "countryCode"})
     coordinates: Coordinates
+    county: str = field(init=False)
 
     @property
     def latitude(self):
@@ -34,6 +35,9 @@ class Place:
     def longitude(self):
         """Longitude from coordinates"""
         return self.coordinates.longitude
+
+    def __post_init__(self):
+        self.county = get_municipality_county(self.administrative_division)
 
 
 @dataclass
@@ -156,3 +160,86 @@ def map_condition(api_condition):
 
     # Default to 'exceptional' if the condition is not found in the mapping
     return condition_mapping.get(api_condition, "exceptional")
+
+
+def get_municipality_county(municipality: str) -> str:
+    """Return the county for a given administrative division."""
+    # Define the county to administrative divisions mapping
+    # https://www.infolex.lt/teise/DocumentSinglePart.aspx?AktoId=125125&StrNr=5#
+    county_municipalities = {
+        "Alytaus": [
+            "Alytaus miesto",
+            "Alytaus rajono",
+            "Druskininkų",
+            "Lazdijų rajono",
+            "Varėnos rajono",
+        ],
+        "Kauno": [
+            "Birštono",
+            "Jonavos rajono",
+            "Kaišiadorių rajono",
+            "Kauno miesto",
+            "Kauno rajono",
+            "Kėdainių rajono",
+            "Prienų rajono",
+            "Raseinių rajono",
+        ],
+        "Klaipėdos": [
+            "Klaipėdos rajono",
+            "Klaipėdos miesto",
+            "Kretingos rajono",
+            "Neringos",
+            "Palangos miesto",
+            "Skuodo rajono",
+            "Šilutės rajono",
+        ],
+        "Marijampolės": [
+            "Kalvarijos",
+            "Kazlų Rūdos",
+            "Marijampolės",
+            "Šakių rajono",
+            "Vilkaviškio rajono",
+        ],
+        "Panevėžio": [
+            "Biržų rajono",
+            "Kupiškio rajono",
+            "Panevėžio miesto",
+            "Panevėžio rajono",
+            "Pasvalio rajono",
+            "Rokiškio rajono",
+        ],
+        "Šiaulių": [
+            "Joniškio rajono",
+            "Kelmės rajono",
+            "Pakruojo rajono",
+            "Akmenės rajono",
+            "Radviliškio rajono",
+            "Šiaulių miesto",
+            "Šiaulių rajono",
+        ],
+        "Tauragės": ["Jurbarko rajono", "Pagėgių", "Šilalės rajono", "Tauragės rajono"],
+        "Telšių": ["Mažeikių rajono", "Plungės rajono", "Rietavo", "Telšių rajono"],
+        "Utenos": [
+            "Anykščių rajono",
+            "Ignalinos rajono",
+            "Molėtų rajono",
+            "Utenos rajono",
+            "Visagino",
+            "Zarasų rajono",
+        ],
+        "Vilniaus": [
+            "Elektrėnų",
+            "Šalčininkų rajono",
+            "Širvintų rajono",
+            "Švenčionių rajono",
+            "Trakų rajono",
+            "Ukmergės rajono",
+            "Vilniaus miesto",
+            "Vilniaus rajono",
+        ],
+    }
+    for county, municipalities in county_municipalities.items():
+        if municipality.replace(" savivaldybė", "") in municipalities:
+            return f"{county} apskritis"
+
+    return "Unknown county"

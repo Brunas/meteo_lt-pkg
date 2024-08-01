@@ -1,3 +1,13 @@
+## Release 0.2.3
+
+Date: `2024-08-02`
+
+### Changes
+
+- Weather warnings using [this](https://www.meteo.lt/prognozes/pavojingi-reiskiniai/) and county mapping [here](https://www.infolex.lt/teise/DocumentSinglePart.aspx?AktoId=125125&StrNr=5#)
+- Removed not existant country from places, country_code added instead
+- Dependabot bumps
+
 ## Release 0.2.2
 
 Date: `2024-07-28`
