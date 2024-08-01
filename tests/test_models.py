@@ -7,7 +7,6 @@ from meteo_lt.models import (
     Forecast,
     ForecastTimestamp,
     Place,
-    get_municipality_county,
 )
 
 
@@ -151,7 +150,7 @@ class TestMeteoLtModels(unittest.TestCase):
         self.assertIn(self.future_timestamp_2, forecast.forecast_timestamps)
         self.assertNotIn(self.past_timestamp, forecast.forecast_timestamps)
 
-    def test_valid_division(self):
+    def test_place_valid_division(self):
         """Test that valid divisions return the correct county."""
         test_cases = {
             "Alytaus miesto": "Alytaus",
@@ -168,15 +167,26 @@ class TestMeteoLtModels(unittest.TestCase):
 
         for division, expected_county in test_cases.items():
             with self.subTest(division=division):
-                self.assertEqual(
-                    get_municipality_county(f"{division} savivaldybė"),
-                    f"{expected_county} apskritis",
+                place = Place(
+                    code="123",
+                    name="Sample Place",
+                    country_code="XX",
+                    administrative_division=f"{division} savivaldybė",
+                    coordinates=Coordinates(latitude=1.0, longitude=1.0),
                 )
+                self.assertEqual(place.county, f"{expected_county} apskritis")
 
-    def test_invalid_division(self):
+    def test_place_invalid_division(self):
         """Test that invalid divisions return 'Unknown county'."""
         invalid_divisions = ["Nonexistent Division", "Fake County", "Imaginary Area"]
 
         for division in invalid_divisions:
             with self.subTest(division=division):
-                self.assertEqual(get_municipality_county(division), "Unknown county")
+                place = Place(
+                    code="123",
+                    name="Sample Place",
+                    country_code="XX",
+                    administrative_division=f"{division} savivaldybė",
+                    coordinates=Coordinates(latitude=1.0, longitude=1.0),
+                )
+                self.assertEqual(place.county, "Unknown county")

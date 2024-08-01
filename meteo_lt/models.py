@@ -39,7 +39,13 @@ class Place:
         return self.coordinates.longitude
 
     def __post_init__(self):
-        self.county = get_municipality_county(self.administrative_division)
+        self.county = "Unknown county"
+        for county, municipalities in COUNTY_MUNICIPALITIES.items():
+            if (
+                self.administrative_division.replace(" savivaldybė", "")
+                in municipalities
+            ):
+                self.county = f"{county} apskritis"
 
 
 @dataclass
@@ -60,7 +66,7 @@ class ForecastTimestamp:
     condition: str = field(init=False)
 
     def __post_init__(self):
-        self.condition = map_condition(self.condition_code)
+        self.condition = CONDITION_MAPPING.get(self.condition_code, "exceptional")
 
 
 @dataclass
@@ -133,18 +139,3 @@ Coordinates.from_dict = classmethod(from_dict)
 Place.from_dict = classmethod(from_dict)
 ForecastTimestamp.from_dict = classmethod(from_dict)
 Forecast.from_dict = classmethod(from_dict)
-
-
-def map_condition(api_condition):
-    """Condition code mapping"""
-    # Default to 'exceptional' if the condition is not found in the mapping
-    return CONDITION_MAPPING.get(api_condition, "exceptional")
-
-
-def get_municipality_county(municipality: str) -> str:
-    """Return the county for a given administrative division."""
-    for county, municipalities in COUNTY_MUNICIPALITIES.items():
-        if municipality.replace(" savivaldybė", "") in municipalities:
-            return f"{county} apskritis"
-
-    return "Unknown county"
