@@ -29,6 +29,13 @@ COUNTY_MUNICIPALITIES = {
         "Skuodo rajono",
         "Šilutės rajono",
     ],
+    "Baltijos priekrantė ir Kuršių marios": [
+        "Klaipėdos rajono",
+        "Klaipėdos miesto",
+        "Neringos",
+        "Palangos miesto",
+        "Šilutės rajono",
+    ],
     "Marijampolės": [
         "Kalvarijos",
         "Kazlų Rūdos",
@@ -74,6 +81,20 @@ COUNTY_MUNICIPALITIES = {
         "Vilniaus rajono",
     ],
 }
+
+# Artificial area for Baltic coast and Curonian Lagoon created by meteo.lt
+# Adding separately for better visibility
+COUNTY_MUNICIPALITIES.update(
+    {
+        "Baltijos priekrantė ir Kuršių marios": [
+            "Klaipėdos rajono",
+            "Klaipėdos miesto",
+            "Neringos",
+            "Palangos miesto",
+            "Šilutės rajono",
+        ],
+    }
+)
 
 CONDITION_MAPPING = {
     "clear": "sunny",

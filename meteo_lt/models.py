@@ -26,7 +26,7 @@ class Place:
     )
     country_code: str = field(metadata={"json_key": "countryCode"})
     coordinates: Coordinates
-    county: str = field(init=False)
+    counties: List[str] = field(init=False)
 
     @property
     def latitude(self):
@@ -39,13 +39,13 @@ class Place:
         return self.coordinates.longitude
 
     def __post_init__(self):
-        self.county = "Unknown county"
+        self.counties = []
         for county, municipalities in COUNTY_MUNICIPALITIES.items():
             if (
                 self.administrative_division.replace(" savivaldybė", "")
                 in municipalities
             ):
-                self.county = f"{county} apskritis"
+                self.counties.append(county)
 
 
 @dataclass
