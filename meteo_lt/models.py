@@ -51,10 +51,6 @@ class ForecastTimestamp:
     pressure: float = field(metadata={"json_key": "seaLevelPressure"})
     humidity: float = field(metadata={"json_key": "relativeHumidity"})
     precipitation: float = field(metadata={"json_key": "totalPrecipitation"})
-    condition: str = field(init=False)
-
-    def __post_init__(self):
-        self.condition = map_condition(self.condition_code)
 
 
 @dataclass
@@ -127,32 +123,3 @@ Coordinates.from_dict = classmethod(from_dict)
 Place.from_dict = classmethod(from_dict)
 ForecastTimestamp.from_dict = classmethod(from_dict)
 Forecast.from_dict = classmethod(from_dict)
-
-
-def map_condition(api_condition):
-    """Condition code mapping"""
-    condition_mapping = {
-        "clear": "sunny",
-        "partly-cloudy": "partlycloudy",
-        "cloudy-with-sunny-intervals": "partlycloudy",
-        "cloudy": "cloudy",
-        "thunder": "lightning",
-        "isolated-thunderstorms": "lightning-rainy",
-        "thunderstorms": "lightning-rainy",
-        "heavy-rain-with-thunderstorms": "lightning-rainy",
-        "light-rain": "rainy",
-        "rain": "rainy",
-        "heavy-rain": "pouring",
-        "light-sleet": "snowy-rainy",
-        "sleet": "snowy-rainy",
-        "freezing-rain": "snowy-rainy",
-        "hail": "hail",
-        "light-snow": "snowy",
-        "snow": "snowy",
-        "heavy-snow": "snowy",
-        "fog": "fog",
-        None: "exceptional",  # For null or undefined conditions
-    }
-
-    # Default to 'exceptional' if the condition is not found in the mapping
-    return condition_mapping.get(api_condition, "exceptional")
