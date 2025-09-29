@@ -4,7 +4,7 @@ from dataclasses import dataclass, field, fields
 from datetime import datetime, timezone
 from typing import List
 
-from .const import CONDITION_MAPPING, COUNTY_MUNICIPALITIES
+from .const import COUNTY_MUNICIPALITIES
 
 
 @dataclass

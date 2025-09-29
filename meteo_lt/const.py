@@ -95,26 +95,3 @@ COUNTY_MUNICIPALITIES.update(
         ],
     }
 )
-
-CONDITION_MAPPING = {
-    "clear": "sunny",
-    "partly-cloudy": "partlycloudy",
-    "cloudy-with-sunny-intervals": "partlycloudy",
-    "cloudy": "cloudy",
-    "thunder": "lightning",
-    "isolated-thunderstorms": "lightning-rainy",
-    "thunderstorms": "lightning-rainy",
-    "heavy-rain-with-thunderstorms": "lightning-rainy",
-    "light-rain": "rainy",
-    "rain": "rainy",
-    "heavy-rain": "pouring",
-    "light-sleet": "snowy-rainy",
-    "sleet": "snowy-rainy",
-    "freezing-rain": "snowy-rainy",
-    "hail": "hail",
-    "light-snow": "snowy",
-    "snow": "snowy",
-    "heavy-snow": "snowy",
-    "fog": "fog",
-    None: "exceptional",  # For null or undefined conditions
-}
