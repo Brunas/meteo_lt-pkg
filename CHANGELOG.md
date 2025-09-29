@@ -1,12 +1,19 @@
-## Release 0.2.3
+## Release 0.3.1
 
-Date: `2024-08-02`
+Date: `2025-10-xx`
 
 ### Changes
 
 - Weather warnings using [this](https://www.meteo.lt/prognozes/pavojingi-reiskiniai/) and county mapping [here](https://www.infolex.lt/teise/DocumentSinglePart.aspx?AktoId=125125&StrNr=5#)
 - Removed not existant country from places, country_code added instead
-- Dependabot bumps
+
+## Release 0.3.0
+
+Date: `2025-09-29`
+
+### Changes
+
+- Removed home assistant specific conditions mapping (to be implemented in HASS integration)
 
 ## Release 0.2.2
 

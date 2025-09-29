@@ -63,10 +63,6 @@ class ForecastTimestamp:
     pressure: float = field(metadata={"json_key": "seaLevelPressure"})
     humidity: float = field(metadata={"json_key": "relativeHumidity"})
     precipitation: float = field(metadata={"json_key": "totalPrecipitation"})
-    condition: str = field(init=False)
-
-    def __post_init__(self):
-        self.condition = CONDITION_MAPPING.get(self.condition_code, "exceptional")
 
 
 @dataclass
