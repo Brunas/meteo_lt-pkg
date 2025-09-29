@@ -1,3 +1,11 @@
+## Release 0.3.0
+
+Date: `2025-09-29`
+
+### Changes
+
+- Removed home assistant specific conditions mapping (to be implemented in HASS integration)
+
 ## Release 0.2.2
 
 Date: `2024-07-28`
