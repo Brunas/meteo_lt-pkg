@@ -74,6 +74,29 @@ asyncio.run(fetch_forecast("vilnius"))
 ```
 >**NOTE** `current_conditions` is the current hour record from the `forecast_timestamps` array. Also, `forecast_timestamps` array has past time records filtered out due to `api.meteo.lt` not doing that automatically.
 
+### Fetching Weather Warnings
+
+To get weather warnings for Lithuania or specific administrative areas:
+
+```python
+async def fetch_warnings():
+    # Get all weather warnings
+    warnings = await api_client.get_weather_warnings()
+    for warning in warnings:
+        print(f"Warning: {warning.warning_type} in {warning.area_name}")
+        print(f"Severity: {warning.severity}")
+        print(f"Description: {warning.description}")
+
+async def fetch_warnings_for_area():
+    # Get warnings for specific administrative division
+    vilnius_warnings = await api_client.get_weather_warnings("Vilniaus miesto")
+    for warning in vilnius_warnings:
+        print(f"Vilnius warning: {warning.warning_type}")
+
+asyncio.run(fetch_warnings())
+asyncio.run(fetch_warnings_for_area())
+```
+
 ## Data Models
 
 The package includes several data models to represent the API responses:
@@ -136,6 +159,25 @@ forecast = Forecast(
     forecast_timestamps=[forecast_timestamp]
 )
 print(forecast.current_conditions().temperature)
+```
+
+### WeatherWarning
+
+Represents a weather warning for a specific area.
+
+```python
+from meteo_lt import WeatherWarning
+
+warning = WeatherWarning(
+    area_name="Vilniaus apskritis",
+    warning_type="frost",
+    severity="High",
+    description="Ground surface frost 0-5 degrees in many places",
+    start_time="2024-07-23T12:00:00+00:00",
+    end_time="2024-07-23T18:00:00+00:00",
+    counties=["Vilniaus"]
+)
+print(f"Warning for {warning.area_name}: {warning.description}")
 ```
 
 ## Contributing

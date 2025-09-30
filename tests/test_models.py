@@ -153,16 +153,16 @@ class TestMeteoLtModels(unittest.TestCase):
     def test_place_valid_division(self):
         """Test that valid divisions return the correct counties."""
         test_cases = {
-            "Alytaus miesto": ["Alytaus"],
-            "Birštono": ["Kauno"],
-            "Klaipėdos rajono": ["Klaipėdos", "Baltijos priekrantė ir Kuršių marios"],
-            "Kalvarijos": ["Marijampolės"],
-            "Panevėžio miesto": ["Panevėžio"],
-            "Joniškio rajono": ["Šiaulių"],
-            "Jurbarko rajono": ["Tauragės"],
-            "Mažeikių rajono": ["Telšių"],
-            "Anykščių rajono": ["Utenos"],
-            "Elektrėnų": ["Vilniaus"],
+            "Alytaus miesto": ["Alytaus apskritis"],
+            "Birštono": ["Kauno apskritis"],
+            "Klaipėdos rajono": ["Klaipėdos apskritis", "Pietryčių Baltija, Kuršių marios"],
+            "Kalvarijos": ["Marijampolės apskritis"],
+            "Panevėžio miesto": ["Panevėžio apskritis"],
+            "Joniškio rajono": ["Šiaulių apskritis"],
+            "Jurbarko rajono": ["Tauragės apskritis"],
+            "Mažeikių rajono": ["Telšių apskritis"],
+            "Anykščių rajono": ["Utenos apskritis"],
+            "Elektrėnų": ["Vilniaus apskritis"],
         }
 
         for division, expected_counties in test_cases.items():

@@ -21,7 +21,7 @@ class TestMeteoLtAPI(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             "Kauno rajono savivaldybė", nearest_place.administrative_division
         )
-        self.assertEqual(["Kauno"], nearest_place.counties)
+        self.assertEqual(["Kauno apskritis"], nearest_place.counties)
         print(nearest_place)
 
     async def test_get_forecast(self):
