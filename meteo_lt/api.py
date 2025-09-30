@@ -135,15 +135,12 @@ class MeteoLtAPI:
     def _create_warning_from_alert(self, alert: dict, area: dict) -> WeatherWarning:
         """Create a WeatherWarning from alert data"""
         try:
-            area_name = area.get("name", "Unknown")
+            county = area.get("name", "Unknown")
             phenomenon = alert.get("phenomenon", "")
             severity = alert.get("severity", "Minor")
 
             # Clean phenomenon name (remove severity prefixes)
             warning_type = re.sub(r"^(dangerous|severe|extreme)-", "", phenomenon)
-
-            # Get counties for this area
-            counties = self._get_counties_for_area(area_name)
 
             # Get descriptions and instructions
             desc_dict = alert.get("description", {})
@@ -159,42 +156,18 @@ class MeteoLtAPI:
                 full_description += f"\n\nRecommendations: {instruction}"
 
             return WeatherWarning(
-                area_name=area_name,
+                county=county,
                 warning_type=warning_type,
                 severity=severity,
                 description=full_description,
                 start_time=alert.get("t_from"),
                 end_time=alert.get("t_to"),
-                counties=counties,
             )
         except Exception as e:
             print(f"Error creating warning: {e}")
             return None
 
-    def _get_counties_for_area(self, area_name: str) -> List[str]:
-        """Map area name to counties using existing COUNTY_MUNICIPALITIES mapping"""
-        counties = []
-        area_lower = area_name.lower()
 
-        # Check if area name directly matches a county (e.g., "Vilniaus apskritis")
-        for county in COUNTY_MUNICIPALITIES:
-            if county.lower() in area_lower or area_lower in county.lower():
-                counties.append(county)
-
-        # Special case for coastal area
-        if "baltija" in area_lower or "kuršių marios" in area_lower:
-            counties.append("Klaipėdos apskritis")
-
-        # If no direct county match, check if it's a municipality
-        if not counties:
-            for county, municipalities in COUNTY_MUNICIPALITIES.items():
-                for municipality in municipalities:
-                    mun_clean = municipality.lower().replace(" savivaldybė", "")
-                    if mun_clean in area_lower or area_lower in mun_clean:
-                        counties.append(county)
-                        break
-
-        return counties
 
     def _warning_affects_area(
         self, warning: WeatherWarning, administrative_division: str
@@ -206,21 +179,21 @@ class MeteoLtAPI:
             .replace(" sav.", "")
         )
 
-        # Check if the administrative division matches the warning area
-        if admin_lower in warning.area_name.lower():
+        # Check if the administrative division matches the warning county
+        if admin_lower in warning.county.lower():
             return True
 
-        # Check if the administrative division is in any of the warning's counties
-        for county, municipalities in COUNTY_MUNICIPALITIES.items():
-            if county in warning.counties:
-                for municipality in municipalities:
-                    mun_clean = (
-                        municipality.lower()
-                        .replace(" savivaldybė", "")
-                        .replace(" sav.", "")
-                    )
-                    if admin_lower in mun_clean or mun_clean in admin_lower:
-                        return True
+        # Check if the administrative division is in the warning's county municipalities
+        if warning.county in COUNTY_MUNICIPALITIES:
+            municipalities = COUNTY_MUNICIPALITIES[warning.county]
+            for municipality in municipalities:
+                mun_clean = (
+                    municipality.lower()
+                    .replace(" savivaldybė", "")
+                    .replace(" sav.", "")
+                )
+                if admin_lower in mun_clean or mun_clean in admin_lower:
+                    return True
 
         return False
 

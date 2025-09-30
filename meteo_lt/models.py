@@ -136,13 +136,12 @@ def from_dict(cls, data: dict):
 class WeatherWarning:
     """Weather Warning"""
 
-    area_name: str
+    county: str
     warning_type: str
     severity: str
     description: str
     start_time: Optional[str] = None
     end_time: Optional[str] = None
-    counties: List[str] = field(default_factory=list)
 
 
 Coordinates.from_dict = classmethod(from_dict)

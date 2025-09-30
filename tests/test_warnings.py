@@ -83,7 +83,7 @@ async def test_get_weather_warnings_success(
 
         assert isinstance(warnings, list)
         assert len(warnings) == 1
-        assert warnings[0].area_name == "Vilniaus apskritis"
+        assert warnings[0].county == "Vilniaus apskritis"
         assert warnings[0].warning_type == "wind"
         assert warnings[0].severity == "Moderate"
 
@@ -131,39 +131,27 @@ async def test_get_weather_warnings_empty_response(api_client):
 def test_weather_warning_model():
     """Test WeatherWarning model creation"""
     warning = WeatherWarning(
-        area_name="Vilniaus apskritis",
+        county="Vilniaus apskritis",
         warning_type="wind",
         severity="Moderate",
         description="Strong wind",
-        counties=["Vilniaus apskritis"],
     )
 
-    assert warning.area_name == "Vilniaus apskritis"
+    assert warning.county == "Vilniaus apskritis"
     assert warning.warning_type == "wind"
     assert warning.severity == "Moderate"
-    assert "Vilniaus apskritis" in warning.counties
 
 
-def test_get_counties_for_area(api_client):
-    """Test county mapping for areas"""
-    counties = api_client._get_counties_for_area("Vilniaus apskritis")
-    assert "Vilniaus apskritis" in counties
 
-    counties = api_client._get_counties_for_area("Kauno apskritis")
-    assert "Kauno apskritis" in counties
-
-    counties = api_client._get_counties_for_area("Pietryčių Baltija, Kuršių marios")
-    assert "Klaipėdos apskritis" in counties
 
 
 def test_warning_affects_area(api_client):
     """Test if warning affects specific administrative division"""
     warning = WeatherWarning(
-        area_name="Vilniaus apskritis",
+        county="Vilniaus apskritis",
         warning_type="wind",
         severity="Moderate",
         description="Test warning",
-        counties=["Vilniaus apskritis"],
     )
 
     assert api_client._warning_affects_area(warning, "Vilniaus miesto")
@@ -187,7 +175,7 @@ def test_create_warning_from_alert(api_client):
     warning = api_client._create_warning_from_alert(alert, area)
 
     assert warning is not None
-    assert warning.area_name == "Vilniaus apskritis"
+    assert warning.county == "Vilniaus apskritis"
     assert warning.warning_type == "wind"
     assert warning.severity == "Moderate"
     assert "Be careful" in warning.description
@@ -197,13 +185,12 @@ def test_get_warnings_for_timestamp(api_client):
     """Test getting warnings for specific timestamp"""
     warnings = [
         WeatherWarning(
-            area_name="Vilniaus apskritis",
+            county="Vilniaus apskritis",
             warning_type="wind",
             severity="Moderate",
             description="Strong wind",
             start_time="2025-09-30T12:00:00Z",
             end_time="2025-09-30T18:00:00Z",
-            counties=["Vilniaus apskritis"],
         )
     ]
 
@@ -232,13 +219,12 @@ def test_enrich_forecast_with_warnings_unit(api_client):
     # Create test warnings
     warnings = [
         WeatherWarning(
-            area_name="Vilniaus miesto savivaldybė",
+            county="Vilniaus apskritis",
             warning_type="wind",
             severity="Moderate",
             description="Strong wind",
             start_time="2025-09-30T12:00:00Z",
             end_time="2025-09-30T18:00:00Z",
-            counties=["Vilniaus apskritis"],
         )
     ]
 
