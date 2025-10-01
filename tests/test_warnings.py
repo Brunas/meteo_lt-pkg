@@ -1,6 +1,6 @@
-"""Tests for weather warnings functionality"""
+"""Integration tests for weather warnings functionality"""
 
-# pylint: disable=W0621,W0212
+# pylint: disable=W0621
 
 import json
 from unittest.mock import AsyncMock, patch
@@ -142,95 +142,3 @@ def test_weather_warning_model():
     assert warning.county == "Kauno apskritis"
     assert warning.warning_type == "wind"
     assert warning.severity == "Moderate"
-
-
-def test_warning_affects_area(api_client):
-    """Test if warning affects specific administrative division"""
-    warning = WeatherWarning(
-        county="Kauno apskritis",
-        warning_type="wind",
-        severity="Moderate",
-        description="Test warning",
-    )
-
-    assert api_client._warning_affects_area(warning, "Kauno miesto")
-    assert api_client._warning_affects_area(warning, "Kauno rajono")
-    assert not api_client._warning_affects_area(warning, "Vilniaus miesto")
-
-
-def test_create_warning_from_alert(api_client):
-    """Test creating warning from alert data"""
-    alert = {
-        "phenomenon": "wind",
-        "severity": "Moderate",
-        "description": {"en": "Strong wind", "lt": "Stiprus vėjas"},
-        "instruction": {"en": "Be careful", "lt": "Būkite atsargūs"},
-        "t_from": "2025-09-30T12:00:00Z",
-        "t_to": "2025-09-30T18:00:00Z",
-    }
-
-    area = {"name": "Kauno apskritis"}
-
-    warning = api_client._create_warning_from_alert(alert, area)  # noqa: W0212
-
-    assert warning is not None
-    assert warning.county == "Kauno apskritis"
-    assert warning.warning_type == "wind"
-    assert warning.severity == "Moderate"
-    assert "Be careful" in warning.description
-
-
-def test_get_warnings_for_timestamp(api_client):  # noqa: W0621
-    """Test getting warnings for specific timestamp"""
-    warnings = [
-        WeatherWarning(
-            county="Kauno apskritis",
-            warning_type="wind",
-            severity="Moderate",
-            description="Strong wind",
-            start_time="2025-09-30T12:00:00Z",
-            end_time="2025-09-30T18:00:00Z",
-        )
-    ]
-
-    # Test timestamp within warning period
-    applicable = api_client._get_warnings_for_timestamp(  # noqa: W0212
-        "2025-09-30T15:00:00+00:00", warnings
-    )
-    assert len(applicable) == 1
-    assert applicable[0].warning_type == "wind"
-
-    # Test timestamp outside warning period
-    applicable = api_client._get_warnings_for_timestamp(  # noqa: W0212
-        "2025-09-30T20:00:00+00:00", warnings
-    )
-    assert len(applicable) == 0
-
-    # Test timestamp before warning period
-    applicable = api_client._get_warnings_for_timestamp(  # noqa: W0212
-        "2025-09-30T10:00:00+00:00", warnings
-    )
-    assert len(applicable) == 0
-
-
-def test_enrich_forecast_with_warnings_unit(api_client):  # noqa: W0621
-    """Test the _enrich_forecast_with_warnings method directly"""
-    # Create test warnings
-    warnings = [
-        WeatherWarning(
-            county="Kauno apskritis",
-            warning_type="wind",
-            severity="Moderate",
-            description="Strong wind",
-            start_time="2025-09-30T12:00:00Z",
-            end_time="2025-09-30T18:00:00Z",
-        )
-    ]
-
-    # Test the warning matching function directly
-    applicable_warnings = api_client._get_warnings_for_timestamp(  # noqa: W0212
-        "2025-09-30T15:00:00+00:00", warnings
-    )
-
-    assert len(applicable_warnings) == 1
-    assert applicable_warnings[0].warning_type == "wind"

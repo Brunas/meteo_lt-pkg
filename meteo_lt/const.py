@@ -1,5 +1,13 @@
 """const.py"""
 
+BASE_URL = "https://api.meteo.lt/v1"
+WARNINGS_URL = (
+    "https://www.meteo.lt/app/mu-plugins/Meteo/Components/"
+    "WeatherWarningsNew/list_JSON.php"
+)
+TIMEOUT = 30
+ENCODING = "utf-8"
+
 # Define the county to administrative divisions mapping
 # https://www.infolex.lt/teise/DocumentSinglePart.aspx?AktoId=125125&StrNr=5#
 COUNTY_MUNICIPALITIES = {
@@ -27,13 +35,6 @@ COUNTY_MUNICIPALITIES = {
         "Neringos",
         "Palangos miesto",
         "Skuodo rajono",
-        "Šilutės rajono",
-    ],
-    "Pietryčių Baltija, Kuršių marios": [
-        "Klaipėdos rajono",
-        "Klaipėdos miesto",
-        "Neringos",
-        "Palangos miesto",
         "Šilutės rajono",
     ],
     "Marijampolės apskritis": [
