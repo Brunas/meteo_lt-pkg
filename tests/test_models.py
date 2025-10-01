@@ -155,7 +155,10 @@ class TestMeteoLtModels(unittest.TestCase):
         test_cases = {
             "Alytaus miesto": ["Alytaus apskritis"],
             "Birštono": ["Kauno apskritis"],
-            "Klaipėdos rajono": ["Klaipėdos apskritis", "Pietryčių Baltija, Kuršių marios"],
+            "Klaipėdos rajono": [
+                "Klaipėdos apskritis",
+                "Pietryčių Baltija, Kuršių marios",
+            ],
             "Kalvarijos": ["Marijampolės apskritis"],
             "Panevėžio miesto": ["Panevėžio apskritis"],
             "Joniškio rajono": ["Šiaulių apskritis"],

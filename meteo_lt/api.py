@@ -87,7 +87,7 @@ class MeteoLtAPI:
         ) as session:
             # Get the latest warnings file
             async with session.get(list_url) as response:
-                response.raise_for_status()
+                await response.raise_for_status()
                 file_list = await response.json()
 
             if not file_list:
@@ -96,7 +96,7 @@ class MeteoLtAPI:
             # Fetch the latest warnings data
             latest_file_url = file_list[0]  # First file is the most recent
             async with session.get(latest_file_url) as response:
-                response.raise_for_status()
+                await response.raise_for_status()
                 text_data = await response.text()
                 warnings_data = json.loads(text_data)
 
@@ -166,8 +166,6 @@ class MeteoLtAPI:
         except Exception as e:
             print(f"Error creating warning: {e}")
             return None
-
-
 
     def _warning_affects_area(
         self, warning: WeatherWarning, administrative_division: str
