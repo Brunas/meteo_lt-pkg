@@ -27,10 +27,10 @@ class MeteoLtAPI:
     async def fetch_places(self):
         """Gets all places from API"""
         async with aiohttp.ClientSession(
-            timeout=aiohttp.ClientTimeout(total=self.TIMEOUT)
+            timeout=aiohttp.ClientTimeout(total=self.TIMEOUT),
+            raise_for_status=True,
         ) as session:
             async with session.get(f"{self.BASE_URL}/places") as response:
-                response.raise_for_status()
                 response.encoding = self.ENCODING
                 response_json = await response.json()
                 self.places = [Place.from_dict(place) for place in response_json]
@@ -57,13 +57,14 @@ class MeteoLtAPI:
 
     async def get_forecast(self, place_code, include_warnings=True):
         """Retrieves forecast data from API"""
+
         async with aiohttp.ClientSession(
-            timeout=aiohttp.ClientTimeout(total=self.TIMEOUT)
+            timeout=aiohttp.ClientTimeout(total=self.TIMEOUT),
+            raise_for_status=True,
         ) as session:
             async with session.get(
                 f"{self.BASE_URL}/places/{place_code}/forecasts/long-term"
             ) as response:
-                response.raise_for_status()
                 response.encoding = self.ENCODING
                 response_json = await response.json()
                 forecast = Forecast.from_dict(response_json)
@@ -78,18 +79,17 @@ class MeteoLtAPI:
     ) -> List[WeatherWarning]:
         """Fetches weather warnings from meteo.lt JSON API"""
 
-        # First get the list of available JSON files
         list_url = (
             "https://www.meteo.lt/app/mu-plugins/Meteo/Components/"
             "WeatherWarningsNew/list_JSON.php"
         )
 
         async with aiohttp.ClientSession(
-            timeout=aiohttp.ClientTimeout(total=self.TIMEOUT)
+            timeout=aiohttp.ClientTimeout(total=self.TIMEOUT),
+            raise_for_status=True,
         ) as session:
             # Get the latest warnings file
             async with session.get(list_url) as response:
-                await response.raise_for_status()
                 file_list = await response.json()
 
             if not file_list:
@@ -98,7 +98,6 @@ class MeteoLtAPI:
             # Fetch the latest warnings data
             latest_file_url = file_list[0]  # First file is the most recent
             async with session.get(latest_file_url) as response:
-                await response.raise_for_status()
                 text_data = await response.text()
                 warnings_data = json.loads(text_data)
 
@@ -199,6 +198,13 @@ class MeteoLtAPI:
 
     async def _enrich_forecast_with_warnings(self, forecast: Forecast):
         """Enrich forecast timestamps with relevant weather warnings"""
+        if (
+            not forecast
+            or not forecast.place
+            or not forecast.place.administrative_division
+        ):
+            return
+
         try:
             # Get warnings for the forecast location
             warnings = await self.get_weather_warnings(
@@ -219,7 +225,6 @@ class MeteoLtAPI:
                 forecast.current_conditions.warnings = self._get_warnings_for_timestamp(
                     forecast.current_conditions.datetime, warnings
                 )
-
         except Exception as e:
             # Don't fail the entire forecast if warnings can't be fetched
             print(f"Warning: Could not fetch weather warnings: {e}")
