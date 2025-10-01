@@ -1,5 +1,7 @@
 """New API class script"""
 
+# pylint: disable=W0718
+
 import json
 import re
 from datetime import datetime, timezone

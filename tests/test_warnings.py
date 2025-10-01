@@ -1,5 +1,7 @@
 """Tests for weather warnings functionality"""
 
+# pylint: disable=W0621,W0212
+
 import json
 from unittest.mock import AsyncMock, patch
 
@@ -169,7 +171,7 @@ def test_create_warning_from_alert(api_client):
 
     area = {"name": "Kauno apskritis"}
 
-    warning = api_client._create_warning_from_alert(alert, area)
+    warning = api_client._create_warning_from_alert(alert, area)  # noqa: W0212
 
     assert warning is not None
     assert warning.county == "Kauno apskritis"
@@ -178,7 +180,7 @@ def test_create_warning_from_alert(api_client):
     assert "Be careful" in warning.description
 
 
-def test_get_warnings_for_timestamp(api_client):
+def test_get_warnings_for_timestamp(api_client):  # noqa: W0621
     """Test getting warnings for specific timestamp"""
     warnings = [
         WeatherWarning(
@@ -192,26 +194,26 @@ def test_get_warnings_for_timestamp(api_client):
     ]
 
     # Test timestamp within warning period
-    applicable = api_client._get_warnings_for_timestamp(
+    applicable = api_client._get_warnings_for_timestamp(  # noqa: W0212
         "2025-09-30T15:00:00+00:00", warnings
     )
     assert len(applicable) == 1
     assert applicable[0].warning_type == "wind"
 
     # Test timestamp outside warning period
-    applicable = api_client._get_warnings_for_timestamp(
+    applicable = api_client._get_warnings_for_timestamp(  # noqa: W0212
         "2025-09-30T20:00:00+00:00", warnings
     )
     assert len(applicable) == 0
 
     # Test timestamp before warning period
-    applicable = api_client._get_warnings_for_timestamp(
+    applicable = api_client._get_warnings_for_timestamp(  # noqa: W0212
         "2025-09-30T10:00:00+00:00", warnings
     )
     assert len(applicable) == 0
 
 
-def test_enrich_forecast_with_warnings_unit(api_client):
+def test_enrich_forecast_with_warnings_unit(api_client):  # noqa: W0621
     """Test the _enrich_forecast_with_warnings method directly"""
     # Create test warnings
     warnings = [
@@ -226,7 +228,7 @@ def test_enrich_forecast_with_warnings_unit(api_client):
     ]
 
     # Test the warning matching function directly
-    applicable_warnings = api_client._get_warnings_for_timestamp(
+    applicable_warnings = api_client._get_warnings_for_timestamp(  # noqa: W0212
         "2025-09-30T15:00:00+00:00", warnings
     )
 
