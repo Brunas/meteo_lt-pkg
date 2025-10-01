@@ -1,4 +1,5 @@
 """API Unit tests"""
+
 # pylint: disable=W0212
 
 import unittest
@@ -43,15 +44,17 @@ class TestMeteoLtAPI(unittest.IsolatedAsyncioTestCase):
 
         mock_response = AsyncMock()
         mock_response.raise_for_status = MagicMock()
-        mock_response.json = AsyncMock(return_value=[
-            {
-                "code": "test",
-                "name": "Test",
-                "administrativeDivision": "Test savivaldybė",
-                "countryCode": "LT",
-                "coordinates": {"latitude": 1.0, "longitude": 2.0}
-            }
-        ])
+        mock_response.json = AsyncMock(
+            return_value=[
+                {
+                    "code": "test",
+                    "name": "Test",
+                    "administrativeDivision": "Test savivaldybė",
+                    "countryCode": "LT",
+                    "coordinates": {"latitude": 1.0, "longitude": 2.0},
+                }
+            ]
+        )
         mock_response.__aenter__ = AsyncMock(return_value=mock_response)
         mock_response.__aexit__ = AsyncMock(return_value=None)
 
@@ -65,6 +68,7 @@ class TestMeteoLtAPI(unittest.IsolatedAsyncioTestCase):
         mock_session.get.assert_called_once_with(f"{BASE_URL}/places")
         self.assertEqual(len(api.places), 1)
         self.assertEqual(api.places[0].code, "test")
+
 
 if __name__ == "__main__":
     unittest.main()
