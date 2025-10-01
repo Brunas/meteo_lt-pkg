@@ -18,15 +18,75 @@ You can install the package using pip:
 pip install meteo_lt-pkg
 ```
 
-## Usage
+## Quick Start
 
-Initializing the API Client
-To start using the library, you need to initialize the `MeteoLtAPI` client:
+Here's a quick example to get you started:
 
 ```python
+import asyncio
 from meteo_lt import MeteoLtAPI
 
-api_client = MeteoLtAPI()
+async def quick_example():
+    async with MeteoLtAPI() as api:
+        # Get current weather for Vilnius
+        forecast = await api.get_forecast("vilnius")
+        current = forecast.current_conditions
+
+        print(f"Current temperature in Vilnius: {current.temperature}°C")
+        print(f"Condition: {current.condition_code}")
+        print(f"Wind: {current.wind_speed} m/s")
+
+        # Check for weather warnings
+        warnings = await api.get_weather_warnings("Vilniaus miesto")
+        if warnings:
+            print(f"Active warnings: {len(warnings)}")
+            for warning in warnings:
+                print(f"   - {warning.warning_type}: {warning.severity}")
+        else:
+            print("No active weather warnings")
+
+asyncio.run(quick_example())
+```
+
+## Usage
+
+### Basic Usage (Recommended)
+
+The recommended way to use the library is with the `async with` context manager, which ensures proper cleanup of HTTP sessions:
+
+```python
+import asyncio
+from meteo_lt import MeteoLtAPI
+
+async def main():
+    async with MeteoLtAPI() as api:
+        # Get weather forecast for Vilnius
+        forecast = await api.get_forecast("vilnius")
+        print(f"Current temperature in {forecast.place.name}: {forecast.current_conditions.temperature}°C")
+
+        # Get weather warnings for Vilnius
+        warnings = await api.get_weather_warnings("Vilniaus miesto")
+        print(f"Active warnings: {len(warnings)}")
+        for warning in warnings:
+            print(f"- {warning.warning_type}: {warning.description}")
+
+asyncio.run(main())
+```
+
+### Alternative Usage
+
+If you prefer not to use the context manager, make sure to call `close()` to properly cleanup resources:
+
+```python
+async def alternative_usage():
+    api = MeteoLtAPI()
+    try:
+        forecast = await api.get_forecast("kaunas")
+        print(f"Temperature: {forecast.current_conditions.temperature}°C")
+    finally:
+        await api.close()  # Important: prevents session warnings
+
+asyncio.run(alternative_usage())
 ```
 
 ### Fetching Places
@@ -34,12 +94,11 @@ api_client = MeteoLtAPI()
 To get the list of available places:
 
 ```python
-import asyncio
-
 async def fetch_places():
-    await api_client.fetch_places()
-    for place in api_client.places:
-        print(place)
+    async with MeteoLtAPI() as api:
+        await api.fetch_places()
+        for place in api.places:
+            print(f"{place.name} ({place.code})")
 
 asyncio.run(fetch_places())
 ```
@@ -49,30 +108,67 @@ asyncio.run(fetch_places())
 You can find the nearest place using latitude and longitude coordinates:
 
 ```python
-async def find_nearest_place(latitude, longitude):
-    nearest_place = await api_client.get_nearest_place(latitude, longitude)
-    print(f"Nearest place: {nearest_place.name}")
+async def find_nearest_place():
+    async with MeteoLtAPI() as api:
+        # Example coordinates for Vilnius, Lithuania
+        nearest_place = await api.get_nearest_place(54.6872, 25.2797)
+        print(f"Nearest place: {nearest_place.name}")
 
- # Example coordinates for Vilnius, Lithuania
-asyncio.run(find_nearest_place(54.6872, 25.2797))
+asyncio.run(find_nearest_place())
 ```
 
-Also, if no places are retrieved before, that is done automatically in `get_nearest_place` method.
+> **NOTE**: If no places are retrieved before, that is done automatically in `get_nearest_place` method.
 
 ### Fetching Weather Forecast
 
-To get the weather forecast for a specific place, use the get_forecast method with the place code:
+To get the weather forecast for a specific place:
 
 ```python
-async def fetch_forecast(place_code):
-    forecast = await api_client.get_forecast(place_code)
-    current_conditions = forecast.current_conditions()
-    print(f"Current temperature: {current_conditions.temperature}°C")
+async def fetch_forecast():
+    async with MeteoLtAPI() as api:
+        # Get forecast for Vilnius
+        forecast = await api.get_forecast("vilnius")
 
-# Example place code for Vilnius, Lithuania
-asyncio.run(fetch_forecast("vilnius"))
+        # Current conditions
+        current = forecast.current_conditions
+        print(f"Current temperature: {current.temperature}°C")
+        print(f"Feels like: {current.apparent_temperature}°C")
+        print(f"Condition: {current.condition_code}")
+
+        # Future forecasts
+        print(f"\nNext 24 hours:")
+        for timestamp in forecast.forecast_timestamps[:24]:
+            print(f"{timestamp.datetime}: {timestamp.temperature}°C")
+
+asyncio.run(fetch_forecast())
 ```
->**NOTE** `current_conditions` is the current hour record from the `forecast_timestamps` array. Also, `forecast_timestamps` array has past time records filtered out due to `api.meteo.lt` not doing that automatically.
+
+> **NOTE**: `current_conditions` is the current hour record from the `forecast_timestamps` array. Also, `forecast_timestamps` array has past time records filtered out due to `api.meteo.lt` not doing that automatically.
+
+### Fetching Weather Forecast with Warnings
+
+To get weather forecast enriched with warnings:
+
+```python
+async def fetch_forecast_with_warnings():
+    async with MeteoLtAPI() as api:
+        # Get forecast with warnings using coordinates
+        forecast = await api.get_forecast_with_warnings(
+            latitude=54.6872,
+            longitude=25.2797
+        )
+
+        print(f"Forecast for {forecast.place.name}")
+        print(f"Current temperature: {forecast.current_conditions.temperature}°C")
+
+        # Check for warnings in current conditions
+        if forecast.current_conditions.warnings:
+            print("Current warnings:")
+            for warning in forecast.current_conditions.warnings:
+                print(f"- {warning.warning_type}: {warning.severity}")
+
+asyncio.run(fetch_forecast_with_warnings())
+```
 
 ### Fetching Weather Warnings
 
@@ -80,18 +176,26 @@ To get weather warnings for Lithuania or specific administrative areas:
 
 ```python
 async def fetch_warnings():
-    # Get all weather warnings
-    warnings = await api_client.get_weather_warnings()
-    for warning in warnings:
-        print(f"Warning: {warning.warning_type} in {warning.area_name}")
-        print(f"Severity: {warning.severity}")
-        print(f"Description: {warning.description}")
+    async with MeteoLtAPI() as api:
+        # Get all weather warnings
+        warnings = await api.get_weather_warnings()
+        print(f"Total active warnings: {len(warnings)}")
+
+        for warning in warnings:
+            print(f"Warning: {warning.warning_type} in {warning.county}")
+            print(f"Severity: {warning.severity}")
+            print(f"Description: {warning.description}")
+            print(f"Active: {warning.start_time} to {warning.end_time}")
+            print("-" * 50)
 
 async def fetch_warnings_for_area():
-    # Get warnings for specific administrative division
-    vilnius_warnings = await api_client.get_weather_warnings("Vilniaus miesto")
-    for warning in vilnius_warnings:
-        print(f"Vilnius warning: {warning.warning_type}")
+    async with MeteoLtAPI() as api:
+        # Get warnings for specific administrative division
+        vilnius_warnings = await api.get_weather_warnings("Vilniaus miesto")
+        print(f"Warnings for Vilnius: {len(vilnius_warnings)}")
+
+        for warning in vilnius_warnings:
+            print(f"- {warning.warning_type} ({warning.severity})")
 
 asyncio.run(fetch_warnings())
 asyncio.run(fetch_warnings_for_area())
@@ -169,15 +273,14 @@ Represents a weather warning for a specific area.
 from meteo_lt import WeatherWarning
 
 warning = WeatherWarning(
-    area_name="Vilniaus apskritis",
+    county="Vilniaus apskritis",
     warning_type="frost",
-    severity="High",
+    severity="Moderate",
     description="Ground surface frost 0-5 degrees in many places",
-    start_time="2024-07-23T12:00:00+00:00",
-    end_time="2024-07-23T18:00:00+00:00",
-    counties=["Vilniaus"]
+    start_time="2024-07-23T12:00:00Z",
+    end_time="2024-07-23T18:00:00Z"
 )
-print(f"Warning for {warning.area_name}: {warning.description}")
+print(f"Warning for {warning.county}: {warning.description}")
 ```
 
 ## Contributing

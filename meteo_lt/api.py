@@ -13,10 +13,23 @@ from .warnings import WeatherWarningsProcessor
 class MeteoLtAPI:
     """Main API class that orchestrates external API calls and warning processing"""
 
-    def __init__(self):
+    def __init__(self, session=None):
         self.places = []
-        self.client = MeteoLtClient()
+        self.client = MeteoLtClient(session)
         self.warnings_processor = WeatherWarningsProcessor(self.client)
+
+    async def __aenter__(self):
+        """Async context manager entry"""
+        await self.client.__aenter__()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit"""
+        await self.client.__aexit__(exc_type, exc_val, exc_tb)
+
+    async def close(self):
+        """Close the API client and cleanup resources"""
+        await self.client.close()
 
     async def fetch_places(self):
         """Gets all places from API"""
@@ -77,6 +90,5 @@ class MeteoLtAPI:
                 self.warnings_processor.enrich_forecast_with_warnings(
                     forecast, warnings
                 )
-
         except Exception as e:
             print(f"Warning: Could not fetch weather warnings: {e}")

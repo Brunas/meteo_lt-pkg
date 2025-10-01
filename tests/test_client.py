@@ -36,7 +36,8 @@ async def test_fetch_places(client):
         mock_response.encoding = "utf-8"
         mock_get.return_value.__aenter__.return_value = mock_response
 
-        places = await client.fetch_places()
+        async with client:
+            places = await client.fetch_places()
 
         assert len(places) == 1
         assert places[0].code == "vilnius"
@@ -79,7 +80,8 @@ async def test_fetch_forecast(client):
         mock_response.encoding = "utf-8"
         mock_get.return_value.__aenter__.return_value = mock_response
 
-        forecast = await client.fetch_forecast("vilnius")
+        async with client:
+            forecast = await client.fetch_forecast("vilnius")
 
         assert forecast.place.code == "vilnius"
         assert len(forecast.forecast_timestamps) == 1
@@ -130,7 +132,8 @@ async def test_fetch_weather_warnings(client):
             mock_data_response,
         ]
 
-        warnings_data = await client.fetch_weather_warnings()
+        async with client:
+            warnings_data = await client.fetch_weather_warnings()
 
         assert isinstance(warnings_data, dict)
         assert "phenomenon_groups" in warnings_data
@@ -145,6 +148,7 @@ async def test_fetch_weather_warnings_empty(client):
         mock_response.raise_for_status.return_value = None
         mock_get.return_value.__aenter__.return_value = mock_response
 
-        warnings_data = await client.fetch_weather_warnings()
+        async with client:
+            warnings_data = await client.fetch_weather_warnings()
 
         assert warnings_data == []
