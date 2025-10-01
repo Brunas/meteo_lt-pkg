@@ -13,7 +13,7 @@ from .warnings import WeatherWarningsProcessor
 class MeteoLtAPI:
     """Main API class that orchestrates external API calls and warning processing"""
 
-    def __init__(self, session=None):
+    def __init__(self, session = None):
         self.places = []
         self.client = MeteoLtClient(session)
         self.warnings_processor = WeatherWarningsProcessor(self.client)
