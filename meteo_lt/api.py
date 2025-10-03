@@ -1,7 +1,5 @@
 """Main API class script"""
 
-# pylint: disable=W0718
-
 from typing import List
 
 from .models import Forecast, WeatherWarning
@@ -81,14 +79,9 @@ class MeteoLtAPI:
         ):
             return
 
-        try:
-            warnings = await self.get_weather_warnings(
-                forecast.place.administrative_division
-            )
+        warnings = await self.get_weather_warnings(
+            forecast.place.administrative_division
+        )
 
-            if warnings:
-                self.warnings_processor.enrich_forecast_with_warnings(
-                    forecast, warnings
-                )
-        except Exception as e:
-            print(f"Warning: Could not fetch weather warnings: {e}")
+        if warnings:
+            self.warnings_processor.enrich_forecast_with_warnings(forecast, warnings)

@@ -1,6 +1,6 @@
 """Tests for weather warnings processor"""
 
-# pylint: disable=W0621,W0212
+# pylint: disable=redefined-outer-name, protected-access
 
 from unittest.mock import patch
 

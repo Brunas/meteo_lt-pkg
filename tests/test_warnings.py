@@ -1,6 +1,6 @@
 """Integration tests for weather warnings functionality"""
 
-# pylint: disable=W0621
+# pylint: disable=redefined-outer-name
 
 import json
 from unittest.mock import AsyncMock, patch

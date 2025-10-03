@@ -1,8 +1,9 @@
 """Tests for MeteoLt API client"""
 
-# pylint: disable=W0621
+# pylint: disable=redefined-outer-name
 
 import json
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -21,11 +22,11 @@ async def test_fetch_places(client):
     """Test fetching places from API"""
     mock_places_data = [
         {
-            "code": "vilnius",
-            "name": "Vilnius",
-            "administrativeDivision": "Vilniaus miesto savivaldybė",
+            "code": "lapės",
+            "name": "Lapės",
+            "administrativeDivision": "Kauno rajono savivaldybė",
             "countryCode": "LT",
-            "coordinates": {"latitude": 54.6872, "longitude": 25.2797},
+            "coordinates": {"latitude": 54.97371, "longitude": 24.00048},
         }
     ]
 
@@ -40,25 +41,30 @@ async def test_fetch_places(client):
             places = await client.fetch_places()
 
         assert len(places) == 1
-        assert places[0].code == "vilnius"
-        assert places[0].name == "Vilnius"
+        assert places[0].code == "lapės"
+        assert places[0].name == "Lapės"
 
 
 @pytest.mark.asyncio
 async def test_fetch_forecast(client):
     """Test fetching forecast from API"""
+
+    tomorrow_date_string = (datetime.now(timezone.utc) + timedelta(days=1)).strftime(
+        "%Y-%m-%d"
+    )
+
     mock_forecast_data = {
         "place": {
-            "code": "vilnius",
-            "name": "Vilnius",
-            "administrativeDivision": "Vilniaus miesto savivaldybė",
+            "code": "lapės",
+            "name": "Lapės",
+            "administrativeDivision": "Kauno rajono savivaldybė",
             "countryCode": "LT",
-            "coordinates": {"latitude": 54.6872, "longitude": 25.2797},
+            "coordinates": {"latitude": 54.97371, "longitude": 24.00048},
         },
-        "forecastCreationTimeUtc": "2025-10-01 12:00:00",
+        "forecastCreationTimeUtc": f"{tomorrow_date_string} 12:00:00",
         "forecastTimestamps": [
             {
-                "forecastTimeUtc": "2025-10-01 15:00:00",
+                "forecastTimeUtc": f"{tomorrow_date_string} 15:00:00",
                 "airTemperature": 15.0,
                 "feelsLikeTemperature": 14.0,
                 "conditionCode": "clear",
@@ -81,17 +87,22 @@ async def test_fetch_forecast(client):
         mock_get.return_value.__aenter__.return_value = mock_response
 
         async with client:
-            forecast = await client.fetch_forecast("vilnius")
+            forecast = await client.fetch_forecast("lapės")
 
-        assert forecast.place.code == "vilnius"
+        assert forecast.place.code == "lapės"
         assert len(forecast.forecast_timestamps) == 1
 
 
 @pytest.mark.asyncio
 async def test_fetch_weather_warnings(client):
     """Test fetching weather warnings from API"""
+
+    tomorrow = datetime.now(timezone.utc) + timedelta(days=1)
+    tomorrow_date_string = tomorrow.strftime("%Y-%m-%d")
+    file_date = tomorrow.strftime("%Y%m%d")
+
     mock_file_list = [
-        "https://www.meteo.lt/meteo_jobs/pavojingi_met_reisk_ibl/20251001120000-00000001"
+        f"https://www.meteo.lt/meteo_jobs/pavojingi_met_reisk_ibl/{file_date}120000-00000001"
     ]
 
     mock_warnings_data = {
@@ -106,8 +117,8 @@ async def test_fetch_weather_warnings(client):
                                 "phenomenon": "wind",
                                 "severity": "Moderate",
                                 "description": {"lt": "Stiprus vėjas"},
-                                "t_from": "2025-10-01T12:00:00Z",
-                                "t_to": "2025-10-01T18:00:00Z",
+                                "t_from": f"{tomorrow_date_string}T12:00:00Z",
+                                "t_to": f"{tomorrow_date_string}T18:00:00Z",
                             }
                         ],
                     }

@@ -1,7 +1,5 @@
 """Weather warnings processor for handling warning-related logic"""
 
-# pylint: disable=W0718
-
 import re
 from datetime import datetime, timezone
 from typing import List
@@ -66,38 +64,30 @@ class WeatherWarningsProcessor:
 
     def _create_warning_from_alert(self, alert: dict, area: dict) -> WeatherWarning:
         """Create a WeatherWarning from alert data"""
-        try:
-            county = area.get("name", "Unknown")
-            phenomenon = alert.get("phenomenon", "")
-            severity = alert.get("severity", "Minor")
+        county = area.get("name", "Unknown")
+        phenomenon = alert.get("phenomenon", "")
+        severity = alert.get("severity", "Minor")
 
-            # Clean phenomenon name (remove severity prefixes)
-            warning_type = re.sub(r"^(dangerous|severe|extreme)-", "", phenomenon)
+        warning_type = re.sub(r"^(dangerous|severe|extreme)-", "", phenomenon)
 
-            # Get descriptions and instructions
-            desc_dict = alert.get("description", {})
-            inst_dict = alert.get("instruction", {})
+        desc_dict = alert.get("description", {})
+        inst_dict = alert.get("instruction", {})
 
-            # Prefer English, fall back to Lithuanian
-            description = desc_dict.get("en") or desc_dict.get("lt", "")
-            instruction = inst_dict.get("en") or inst_dict.get("lt", "")
+        description = desc_dict.get("en") or desc_dict.get("lt", "")
+        instruction = inst_dict.get("en") or inst_dict.get("lt", "")
 
-            # Combine description and instruction
-            full_description = description
-            if instruction:
-                full_description += f"\n\nRecommendations: {instruction}"
+        full_description = description
+        if instruction:
+            full_description += f"\n\nRecommendations: {instruction}"
 
-            return WeatherWarning(
-                county=county,
-                warning_type=warning_type,
-                severity=severity,
-                description=full_description,
-                start_time=alert.get("t_from"),
-                end_time=alert.get("t_to"),
-            )
-        except Exception as e:
-            print(f"Error creating warning: {e}")
-            return None
+        return WeatherWarning(
+            county=county,
+            warning_type=warning_type,
+            severity=severity,
+            description=full_description,
+            start_time=alert.get("t_from"),
+            end_time=alert.get("t_to"),
+        )
 
     def _warning_affects_area(
         self, warning: WeatherWarning, administrative_division: str
