@@ -1,6 +1,6 @@
 ## Release 0.4.0
 
-Date: `2025-10-01`
+Date: `2025-10-03`
 
 ### Changes
 

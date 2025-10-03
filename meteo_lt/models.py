@@ -49,6 +49,18 @@ class Place:
 
 
 @dataclass
+class WeatherWarning:
+    """Weather Warning"""
+
+    county: str
+    warning_type: str
+    severity: str
+    description: str
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+
+
+@dataclass
 class ForecastTimestamp:
     """ForecastTimestamp"""
 
@@ -63,7 +75,7 @@ class ForecastTimestamp:
     pressure: float = field(metadata={"json_key": "seaLevelPressure"})
     humidity: float = field(metadata={"json_key": "relativeHumidity"})
     precipitation: float = field(metadata={"json_key": "totalPrecipitation"})
-    warnings: List["WeatherWarning"] = field(default_factory=list, init=False)
+    warnings: List[WeatherWarning] = field(default_factory=list, init=False)
 
 
 @dataclass
@@ -130,18 +142,6 @@ def from_dict(cls, data: dict):
 
         init_args[f.name] = value
     return cls(**init_args)
-
-
-@dataclass
-class WeatherWarning:
-    """Weather Warning"""
-
-    county: str
-    warning_type: str
-    severity: str
-    description: str
-    start_time: Optional[str] = None
-    end_time: Optional[str] = None
 
 
 Coordinates.from_dict = classmethod(from_dict)
