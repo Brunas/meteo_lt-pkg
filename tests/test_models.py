@@ -2,7 +2,12 @@
 
 from datetime import datetime, timedelta
 import unittest
-from meteo_lt.models import Coordinates, Forecast, ForecastTimestamp, Place
+from meteo_lt.models import (
+    Coordinates,
+    Forecast,
+    ForecastTimestamp,
+    Place,
+)
 
 
 class TestMeteoLtModels(unittest.TestCase):
@@ -13,7 +18,7 @@ class TestMeteoLtModels(unittest.TestCase):
         self.place = Place(
             code="123",
             name="Sample Place",
-            country="Sample Country",
+            country_code="XX",
             administrative_division="Sample Admin Div",
             coordinates=Coordinates(latitude=54.6872, longitude=25.2797),
         )
@@ -144,3 +149,47 @@ class TestMeteoLtModels(unittest.TestCase):
         self.assertIn(self.future_timestamp_1, forecast.forecast_timestamps)
         self.assertIn(self.future_timestamp_2, forecast.forecast_timestamps)
         self.assertNotIn(self.past_timestamp, forecast.forecast_timestamps)
+
+    def test_place_valid_division(self):
+        """Test that valid divisions return the correct counties."""
+        test_cases = {
+            "Alytaus miesto": ["Alytaus apskritis"],
+            "Birštono": ["Kauno apskritis"],
+            "Klaipėdos rajono": [
+                "Klaipėdos apskritis",
+                "Pietryčių Baltija, Kuršių marios",
+            ],
+            "Kalvarijos": ["Marijampolės apskritis"],
+            "Panevėžio miesto": ["Panevėžio apskritis"],
+            "Joniškio rajono": ["Šiaulių apskritis"],
+            "Jurbarko rajono": ["Tauragės apskritis"],
+            "Mažeikių rajono": ["Telšių apskritis"],
+            "Anykščių rajono": ["Utenos apskritis"],
+            "Elektrėnų": ["Vilniaus apskritis"],
+        }
+
+        for division, expected_counties in test_cases.items():
+            with self.subTest(division=division):
+                place = Place(
+                    code="123",
+                    name="Sample Place",
+                    country_code="XX",
+                    administrative_division=f"{division} savivaldybė",
+                    coordinates=Coordinates(latitude=1.0, longitude=1.0),
+                )
+                self.assertEqual(place.counties, expected_counties)
+
+    def test_place_invalid_division(self):
+        """Test that invalid divisions return 'Unknown county'."""
+        invalid_divisions = ["Nonexistent Division", "Fake County", "Imaginary Area"]
+
+        for division in invalid_divisions:
+            with self.subTest(division=division):
+                place = Place(
+                    code="123",
+                    name="Sample Place",
+                    country_code="XX",
+                    administrative_division=f"{division} savivaldybė",
+                    coordinates=Coordinates(latitude=1.0, longitude=1.0),
+                )
+                self.assertFalse(place.counties)

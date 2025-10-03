@@ -2,7 +2,9 @@
 
 from dataclasses import dataclass, field, fields
 from datetime import datetime, timezone
-from typing import List
+from typing import List, Optional
+
+from .const import COUNTY_MUNICIPALITIES
 
 
 @dataclass
@@ -22,8 +24,9 @@ class Place:
     administrative_division: str = field(
         metadata={"json_key": "administrativeDivision"}
     )
-    country: str
+    country_code: str = field(metadata={"json_key": "countryCode"})
     coordinates: Coordinates
+    counties: List[str] = field(init=False)
 
     @property
     def latitude(self):
@@ -34,6 +37,27 @@ class Place:
     def longitude(self):
         """Longitude from coordinates"""
         return self.coordinates.longitude
+
+    def __post_init__(self):
+        self.counties = []
+        for county, municipalities in COUNTY_MUNICIPALITIES.items():
+            if (
+                self.administrative_division.replace(" savivaldybė", "")
+                in municipalities
+            ):
+                self.counties.append(county)
+
+
+@dataclass
+class WeatherWarning:
+    """Weather Warning"""
+
+    county: str
+    warning_type: str
+    severity: str
+    description: str
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
 
 
 @dataclass
@@ -51,6 +75,7 @@ class ForecastTimestamp:
     pressure: float = field(metadata={"json_key": "seaLevelPressure"})
     humidity: float = field(metadata={"json_key": "relativeHumidity"})
     precipitation: float = field(metadata={"json_key": "totalPrecipitation"})
+    warnings: List[WeatherWarning] = field(default_factory=list, init=False)
 
 
 @dataclass
@@ -123,3 +148,4 @@ Coordinates.from_dict = classmethod(from_dict)
 Place.from_dict = classmethod(from_dict)
 ForecastTimestamp.from_dict = classmethod(from_dict)
 Forecast.from_dict = classmethod(from_dict)
+WeatherWarning.from_dict = classmethod(from_dict)

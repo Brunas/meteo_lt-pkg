@@ -1,3 +1,13 @@
+## Release 0.4.0
+
+Date: `2025-10-03`
+
+### Changes
+
+- Major code refactoring for weather warnings using [this](https://www.meteo.lt/prognozes/pavojingi-reiskiniai/) and county mapping [here](https://www.infolex.lt/teise/DocumentSinglePart.aspx?AktoId=125125&StrNr=5#)
+- Removed not existant country from places, country_code added instead
+- websession injection (thanks to [Nojus](https://github.com/xE1H))
+
 ## Release 0.3.0
 
 Date: `2025-09-29`

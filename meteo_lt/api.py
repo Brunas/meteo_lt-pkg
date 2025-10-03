@@ -1,34 +1,37 @@
 """Main API class script"""
 
-import aiohttp
+from typing import List
 
-from .models import Place, Forecast
+from .models import Forecast, WeatherWarning
 from .utils import find_nearest_place
+from .client import MeteoLtClient
+from .warnings import WeatherWarningsProcessor
 
 
 class MeteoLtAPI:
-    """Main API class"""
+    """Main API class that orchestrates external API calls and warning processing"""
 
-    BASE_URL = "https://api.meteo.lt/v1"
-    TIMEOUT = 30
-    ENCODING = "utf-8"
-
-    def __init__(self, session = None):
+    def __init__(self, session=None):
         self.places = []
-        if session is not None:
-            self._session = session
-        else:
-            self._session = aiohttp.ClientSession(
-                timeout=aiohttp.ClientTimeout(total=self.TIMEOUT)
-            )
+        self.client = MeteoLtClient(session)
+        self.warnings_processor = WeatherWarningsProcessor(self.client)
+
+    async def __aenter__(self):
+        """Async context manager entry"""
+        await self.client.__aenter__()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit"""
+        await self.client.__aexit__(exc_type, exc_val, exc_tb)
+
+    async def close(self):
+        """Close the API client and cleanup resources"""
+        await self.client.close()
 
     async def fetch_places(self):
         """Gets all places from API"""
-        async with self._session.get(f"{self.BASE_URL}/places") as response:
-            response.raise_for_status()
-            response.encoding = self.ENCODING
-            response_json = await response.json()
-            self.places = [Place.from_dict(place) for place in response_json]
+        self.places = await self.client.fetch_places()
 
     async def get_nearest_place(self, latitude, longitude):
         """Finds nearest place using provided coordinates"""
@@ -36,12 +39,49 @@ class MeteoLtAPI:
             await self.fetch_places()
         return find_nearest_place(latitude, longitude, self.places)
 
-    async def get_forecast(self, place_code):
+    async def get_forecast_with_warnings(
+        self, latitude=None, longitude=None, place_code=None
+    ):
+        """Get forecast with weather warnings for a location"""
+        if place_code is None:
+            if latitude is None or longitude is None:
+                raise ValueError(
+                    "Either place_code or both latitude and longitude must be provided"
+                )
+            place = await self.get_nearest_place(latitude, longitude)
+            place_code = place.code
+
+        return await self.get_forecast(place_code, include_warnings=True)
+
+    async def get_forecast(self, place_code, include_warnings=True):
         """Retrieves forecast data from API"""
-        async with self._session.get(
-            f"{self.BASE_URL}/places/{place_code}/forecasts/long-term"
-        ) as response:
-            response.raise_for_status()
-            response.encoding = self.ENCODING
-            response_json = await response.json()
-            return Forecast.from_dict(response_json)
+        forecast = await self.client.fetch_forecast(place_code)
+
+        if include_warnings:
+            await self._enrich_forecast_with_warnings(forecast)
+
+        return forecast
+
+    async def get_weather_warnings(
+        self, administrative_division: str = None
+    ) -> List[WeatherWarning]:
+        """Fetches weather warnings from meteo.lt JSON API"""
+        return await self.warnings_processor.get_weather_warnings(
+            administrative_division
+        )
+
+    async def _enrich_forecast_with_warnings(self, forecast: Forecast):
+        """Enrich forecast timestamps with relevant weather warnings"""
+        if (
+            not forecast
+            or not forecast.place
+            or not forecast.place.administrative_division
+        ):
+            return
+
+        warnings = await self.get_weather_warnings(
+            forecast.place.administrative_division
+        )
+
+        if warnings:
+            self.warnings_processor.enrich_forecast_with_warnings(forecast, warnings)
