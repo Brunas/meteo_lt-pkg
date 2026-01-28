@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field, fields
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import List, Optional, Dict, Any, Type
 
 from .const import COUNTY_MUNICIPALITIES
 
@@ -16,17 +16,12 @@ class Coordinates:
 
 
 @dataclass
-class Place:
-    """Places"""
+class LocationBase:
+    """Base class for locations with coordinates"""
 
     code: str
     name: str
-    administrative_division: str = field(
-        metadata={"json_key": "administrativeDivision"}
-    )
-    country_code: str = field(metadata={"json_key": "countryCode"})
     coordinates: Coordinates
-    counties: List[str] = field(init=False)
 
     @property
     def latitude(self):
@@ -38,13 +33,19 @@ class Place:
         """Longitude from coordinates"""
         return self.coordinates.longitude
 
+
+@dataclass
+class Place(LocationBase):
+    """Places"""
+
+    administrative_division: str = field(metadata={"json_key": "administrativeDivision"})
+    country_code: str = field(metadata={"json_key": "countryCode"})
+    counties: List[str] = field(init=False)
+
     def __post_init__(self):
         self.counties = []
         for county, municipalities in COUNTY_MUNICIPALITIES.items():
-            if (
-                self.administrative_division.replace(" savivaldybė", "")
-                in municipalities
-            ):
+            if self.administrative_division.replace(" savivaldybė", "") in municipalities:
                 self.counties.append(county)
 
 
@@ -58,6 +59,32 @@ class WeatherWarning:
     description: str
     start_time: Optional[str] = None
     end_time: Optional[str] = None
+
+
+@dataclass
+class HydroStation(LocationBase):
+    """Hydrological station data."""
+
+    water_body: str
+
+
+@dataclass
+class HydroObservation:
+    """Single hydrological observation."""
+
+    observation_datetime: Optional[str] = None
+    water_level: Optional[float] = None  # cm
+    water_temperature: Optional[float] = None  # °C
+    water_discharge: Optional[float] = None  # m3/s
+
+
+@dataclass
+class HydroObservationData:
+    """Observation data response."""
+
+    station: HydroStation
+    observations_data_range: Optional[dict] = None
+    observations: List[HydroObservation] = field(default_factory=list)
 
 
 @dataclass
@@ -85,16 +112,12 @@ class Forecast:
     place: Place
     forecast_created: str = field(metadata={"json_key": "forecastCreationTimeUtc"})
     current_conditions: ForecastTimestamp
-    forecast_timestamps: List[ForecastTimestamp] = field(
-        metadata={"json_key": "forecastTimestamps"}
-    )
+    forecast_timestamps: List[ForecastTimestamp] = field(metadata={"json_key": "forecastTimestamps"})
 
     def __post_init__(self):
         """Post-initialization processing."""
 
-        current_hour = datetime.now(timezone.utc).replace(
-            minute=0, second=0, microsecond=0
-        )
+        current_hour = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
         # Current conditions are equal to current hour record
         for forecast in self.forecast_timestamps:
             if (
@@ -118,9 +141,9 @@ class Forecast:
         ]
 
 
-def from_dict(cls, data: dict):
+def from_dict(cls: Type, data: Dict[str, Any]) -> Any:
     """Utility function to convert a dictionary to a dataclass instance."""
-    init_args = {}
+    init_args: Dict[str, Any] = {}
     for f in fields(cls):
         if not f.init:
             continue  # Skip fields that are not part of the constructor
@@ -133,11 +156,9 @@ def from_dict(cls, data: dict):
             value = from_dict(f.type, value)
         elif isinstance(value, list) and hasattr(f.type.__args__[0], "from_dict"):
             value = [from_dict(f.type.__args__[0], item) for item in value]
-        elif f.name in ("datetime", "forecast_created"):
+        elif f.name in ("datetime", "forecast_created", "observation_datetime") and value:
             # Convert datetime to ISO 8601 format
-            dt = datetime.strptime(value, "%Y-%m-%d %H:%M:%S").replace(
-                tzinfo=timezone.utc
-            )
+            dt = datetime.strptime(value, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
             value = dt.isoformat()
 
         init_args[f.name] = value
@@ -149,3 +170,6 @@ Place.from_dict = classmethod(from_dict)
 ForecastTimestamp.from_dict = classmethod(from_dict)
 Forecast.from_dict = classmethod(from_dict)
 WeatherWarning.from_dict = classmethod(from_dict)
+HydroStation.from_dict = classmethod(from_dict)
+HydroObservation.from_dict = classmethod(from_dict)
+HydroObservationData.from_dict = classmethod(from_dict)

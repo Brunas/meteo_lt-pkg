@@ -1,3 +1,13 @@
+## Release 0.5.0
+
+Date: `2026-01-29`
+
+### Changes
+
+- Hydro observations implemented
+- Python code clean-up
+- Usual version bumps
+
 ## Release 0.4.0
 
 Date: `2025-10-03`

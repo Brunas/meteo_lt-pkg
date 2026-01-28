@@ -32,9 +32,7 @@ def mock_warnings_data():
                 "phenomenon_category": "wind",
                 "area_groups": [
                     {
-                        "areas": [
-                            {"id": "lt.lhms.county:LT002", "name": "Kauno apskritis"}
-                        ],
+                        "areas": [{"id": "lt.lhms.county:LT002", "name": "Kauno apskritis"}],
                         "single_alerts": [
                             {
                                 "phenomenon": "wind",
@@ -133,31 +131,23 @@ def test_get_warnings_for_timestamp(warnings_processor):
     ]
 
     # Test timestamp within warning period
-    applicable = warnings_processor._get_warnings_for_timestamp(
-        "2025-09-30T15:00:00+00:00", warnings
-    )
+    applicable = warnings_processor._get_warnings_for_timestamp("2025-09-30T15:00:00+00:00", warnings)
     assert len(applicable) == 1
     assert applicable[0].warning_type == "wind"
 
     # Test timestamp outside warning period
-    applicable = warnings_processor._get_warnings_for_timestamp(
-        "2025-09-30T20:00:00+00:00", warnings
-    )
+    applicable = warnings_processor._get_warnings_for_timestamp("2025-09-30T20:00:00+00:00", warnings)
     assert len(applicable) == 0
 
     # Test timestamp before warning period
-    applicable = warnings_processor._get_warnings_for_timestamp(
-        "2025-09-30T10:00:00+00:00", warnings
-    )
+    applicable = warnings_processor._get_warnings_for_timestamp("2025-09-30T10:00:00+00:00", warnings)
     assert len(applicable) == 0
 
 
 @pytest.mark.asyncio
 async def test_get_weather_warnings(warnings_processor, mock_warnings_data):
     """Test getting weather warnings"""
-    with patch.object(
-        warnings_processor.client, "fetch_weather_warnings"
-    ) as mock_fetch:
+    with patch.object(warnings_processor.client, "fetch_weather_warnings") as mock_fetch:
         mock_fetch.return_value = mock_warnings_data
 
         warnings = await warnings_processor.get_weather_warnings()
@@ -169,9 +159,7 @@ async def test_get_weather_warnings(warnings_processor, mock_warnings_data):
 @pytest.mark.asyncio
 async def test_get_weather_warnings_filtered(warnings_processor, mock_warnings_data):
     """Test getting weather warnings filtered by area"""
-    with patch.object(
-        warnings_processor.client, "fetch_weather_warnings"
-    ) as mock_fetch:
+    with patch.object(warnings_processor.client, "fetch_weather_warnings") as mock_fetch:
         mock_fetch.return_value = mock_warnings_data
 
         warnings = await warnings_processor.get_weather_warnings("Kauno miesto")

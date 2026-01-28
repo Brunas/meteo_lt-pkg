@@ -2,7 +2,7 @@
 
 import re
 from datetime import datetime, timezone
-from typing import List
+from typing import List, Optional, Dict, Any
 
 from .models import Forecast, WeatherWarning
 from .const import COUNTY_MUNICIPALITIES
@@ -15,24 +15,18 @@ class WeatherWarningsProcessor:
     def __init__(self, client: MeteoLtClient):
         self.client = client
 
-    async def get_weather_warnings(
-        self, administrative_division: str = None
-    ) -> List[WeatherWarning]:
+    async def get_weather_warnings(self, administrative_division: str = None) -> List[WeatherWarning]:
         """Fetches and processes weather warnings"""
         warnings_data = await self.client.fetch_weather_warnings()
         warnings = self._parse_warnings_data(warnings_data)
 
         # Filter by administrative division if specified
         if administrative_division:
-            warnings = [
-                w
-                for w in warnings
-                if self._warning_affects_area(w, administrative_division)
-            ]
+            warnings = [w for w in warnings if self._warning_affects_area(w, administrative_division)]
 
         return warnings
 
-    def _parse_warnings_data(self, warnings_data: dict) -> List[WeatherWarning]:
+    def _parse_warnings_data(self, warnings_data: Optional[Dict[str, Any]]) -> List[WeatherWarning]:
         """Parse raw warnings data into WeatherWarning objects"""
         warnings = []
 
@@ -49,9 +43,7 @@ class WeatherWarningsProcessor:
             for area_group in phenomenon_group.get("area_groups", []):
                 for alert in area_group.get("single_alerts", []):
                     # Skip alerts with no phenomenon or empty descriptions
-                    if not alert.get("phenomenon") or not alert.get(
-                        "description", {}
-                    ).get("lt"):
+                    if not alert.get("phenomenon") or not alert.get("description", {}).get("lt"):
                         continue
 
                     # Create warnings for each area in the group
@@ -62,7 +54,7 @@ class WeatherWarningsProcessor:
 
         return warnings
 
-    def _create_warning_from_alert(self, alert: dict, area: dict) -> WeatherWarning:
+    def _create_warning_from_alert(self, alert: Dict[str, Any], area: Dict[str, Any]) -> WeatherWarning:
         """Create a WeatherWarning from alert data"""
         county = area.get("name", "Unknown")
         phenomenon = alert.get("phenomenon", "")
@@ -89,15 +81,9 @@ class WeatherWarningsProcessor:
             end_time=alert.get("t_to"),
         )
 
-    def _warning_affects_area(
-        self, warning: WeatherWarning, administrative_division: str
-    ) -> bool:
+    def _warning_affects_area(self, warning: WeatherWarning, administrative_division: str) -> bool:
         """Check if warning affects specified administrative division"""
-        admin_lower = (
-            administrative_division.lower()
-            .replace(" savivaldybė", "")
-            .replace(" sav.", "")
-        )
+        admin_lower = administrative_division.lower().replace(" savivaldybė", "").replace(" sav.", "")
 
         # Check if the administrative division matches the warning county
         if admin_lower in warning.county.lower():
@@ -107,28 +93,20 @@ class WeatherWarningsProcessor:
         if warning.county in COUNTY_MUNICIPALITIES:
             municipalities = COUNTY_MUNICIPALITIES[warning.county]
             for municipality in municipalities:
-                mun_clean = (
-                    municipality.lower()
-                    .replace(" savivaldybė", "")
-                    .replace(" sav.", "")
-                )
+                mun_clean = municipality.lower().replace(" savivaldybė", "").replace(" sav.", "")
                 if admin_lower in mun_clean or mun_clean in admin_lower:
                     return True
 
         return False
 
-    def enrich_forecast_with_warnings(
-        self, forecast: Forecast, warnings: List[WeatherWarning]
-    ):
+    def enrich_forecast_with_warnings(self, forecast: Forecast, warnings: List[WeatherWarning]) -> None:
         """Enrich forecast timestamps with relevant weather warnings"""
         if not warnings:
             return
 
         # For each forecast timestamp, find applicable warnings
         for timestamp in forecast.forecast_timestamps:
-            timestamp.warnings = self._get_warnings_for_timestamp(
-                timestamp.datetime, warnings
-            )
+            timestamp.warnings = self._get_warnings_for_timestamp(timestamp.datetime, warnings)
 
         # Also add warnings to current conditions if available
         if hasattr(forecast, "current_conditions") and forecast.current_conditions:
@@ -136,14 +114,10 @@ class WeatherWarningsProcessor:
                 forecast.current_conditions.datetime, warnings
             )
 
-    def _get_warnings_for_timestamp(
-        self, timestamp_str: str, warnings: List[WeatherWarning]
-    ) -> List[WeatherWarning]:
+    def _get_warnings_for_timestamp(self, timestamp_str: str, warnings: List[WeatherWarning]) -> List[WeatherWarning]:
         """Get warnings that are active for a specific timestamp"""
         try:
-            timestamp = datetime.fromisoformat(timestamp_str).replace(
-                tzinfo=timezone.utc
-            )
+            timestamp = datetime.fromisoformat(timestamp_str).replace(tzinfo=timezone.utc)
             applicable_warnings = []
 
             for warning in warnings:
@@ -151,12 +125,8 @@ class WeatherWarningsProcessor:
                     continue
 
                 try:
-                    start_time = datetime.fromisoformat(
-                        warning.start_time.replace("Z", "+00:00")
-                    )
-                    end_time = datetime.fromisoformat(
-                        warning.end_time.replace("Z", "+00:00")
-                    )
+                    start_time = datetime.fromisoformat(warning.start_time.replace("Z", "+00:00"))
+                    end_time = datetime.fromisoformat(warning.end_time.replace("Z", "+00:00"))
 
                     # Check if timestamp falls within warning period
                     if start_time <= timestamp <= end_time:

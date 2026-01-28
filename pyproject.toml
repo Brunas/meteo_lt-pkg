@@ -14,7 +14,7 @@ classifiers = [
     "Development Status :: 4 - Beta",
 ]
 dependencies = [
-    "aiohttp",
+    "aiohttp>=3.13",
 ]
 
 [project.urls]
@@ -23,16 +23,19 @@ Issues = "https://github.com/Brunas/meteo_lt-pkg/issues"
 
 [project.optional-dependencies]
 dev = [
-    "pytest",
-    "pytest-cov",
-    "pytest-asyncio",
-    "black",
-    "coverage",
-    "flake8",
-    "pyflakes",
-    "pylint",
-    "build"
+    "pytest>=9.0",
+    "pytest-cov>=7.0",
+    "pytest-asyncio>=1.3",
+    "black>=26.0",
+    "coverage>=7.0",
+    "flake8>=7.0",
+    "pyflakes>=3.0",
+    "pylint>=4.0",
+    "build>=1.0"
 ]
+
+[tool.black]
+line-length = 120
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]

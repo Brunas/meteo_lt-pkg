@@ -1,9 +1,12 @@
 """utils.py"""
 
 from math import radians, sin, cos, sqrt, atan2
+from typing import TypeVar, List
+
+LocationT = TypeVar("LocationT")  # Type variable for location objects with latitude/longitude
 
 
-def haversine(lat1, lon1, lat2, lon2):
+def haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Calculate the great-circle distance between two points on the Earth's surface."""
     # Convert latitude and longitude from degrees to radians
     lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
@@ -17,18 +20,18 @@ def haversine(lat1, lon1, lat2, lon2):
     return r * c
 
 
-def find_nearest_place(latitude, longitude, places):
-    """Find the nearest place from a list of places based on the given latitude and longitude."""
-    nearest_place = None
+def find_nearest_location(latitude: float, longitude: float, locations: List[LocationT]) -> LocationT:
+    """Find the nearest location from a list of locations based on the given latitude and longitude."""
+    nearest_location = None
     min_distance = float("inf")
 
-    for place in places:
-        place_lat = place.latitude
-        place_lon = place.longitude
-        distance = haversine(latitude, longitude, place_lat, place_lon)
+    for location in locations:
+        location_lat = location.latitude
+        location_lon = location.longitude
+        distance = haversine(latitude, longitude, location_lat, location_lon)
 
         if distance < min_distance:
             min_distance = distance
-            nearest_place = place
+            nearest_location = location
 
-    return nearest_place
+    return nearest_location

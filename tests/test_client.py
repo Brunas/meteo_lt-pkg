@@ -6,6 +6,7 @@ import json
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, patch
 
+import aiohttp
 import pytest
 
 from meteo_lt.client import MeteoLtClient
@@ -49,9 +50,7 @@ async def test_fetch_places(client):
 async def test_fetch_forecast(client):
     """Test fetching forecast from API"""
 
-    tomorrow_date_string = (datetime.now(timezone.utc) + timedelta(days=1)).strftime(
-        "%Y-%m-%d"
-    )
+    tomorrow_date_string = (datetime.now(timezone.utc) + timedelta(days=1)).strftime("%Y-%m-%d")
 
     mock_forecast_data = {
         "place": {
@@ -101,9 +100,7 @@ async def test_fetch_weather_warnings(client):
     tomorrow_date_string = tomorrow.strftime("%Y-%m-%d")
     file_date = tomorrow.strftime("%Y%m%d")
 
-    mock_file_list = [
-        f"https://www.meteo.lt/meteo_jobs/pavojingi_met_reisk_ibl/{file_date}120000-00000001"
-    ]
+    mock_file_list = [f"https://www.meteo.lt/meteo_jobs/pavojingi_met_reisk_ibl/{file_date}120000-00000001"]
 
     mock_warnings_data = {
         "phenomenon_groups": [
@@ -163,3 +160,177 @@ async def test_fetch_weather_warnings_empty(client):
             warnings_data = await client.fetch_weather_warnings()
 
         assert warnings_data == []
+
+
+@pytest.mark.asyncio
+async def test_fetch_hydro_stations(client):
+    """Test fetching hydro stations"""
+    mock_stations_data = [
+        {
+            "code": "station_1",
+            "name": "Station 1",
+            "waterBody": "River",
+            "coordinates": {"latitude": 54.0, "longitude": 24.0},
+        }
+    ]
+
+    with patch("aiohttp.ClientSession.get") as mock_get:
+        mock_response = AsyncMock()
+        mock_response.json.return_value = mock_stations_data
+        mock_response.status = 200
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value.__aenter__.return_value = mock_response
+
+        async with client:
+            stations = await client.fetch_hydro_stations()
+
+        assert len(stations) == 1
+        assert stations[0].code == "station_1"
+        assert stations[0].name == "Station 1"
+
+
+@pytest.mark.asyncio
+async def test_fetch_hydro_stations_error(client):
+    """Test handling error when fetching hydro stations"""
+    with patch("aiohttp.ClientSession.get") as mock_get:
+        mock_response = AsyncMock()
+        mock_response.status = 500
+        mock_get.return_value.__aenter__.return_value = mock_response
+
+        with pytest.raises(Exception, match="API returned status 500"):
+            async with client:
+                await client.fetch_hydro_stations()
+
+
+@pytest.mark.asyncio
+async def test_fetch_hydro_station(client):
+    """Test fetching a specific hydro station"""
+    mock_station_data = {
+        "code": "station_1",
+        "name": "Station 1",
+        "waterBody": "River",
+        "coordinates": {"latitude": 54.0, "longitude": 24.0},
+    }
+
+    with patch("aiohttp.ClientSession.get") as mock_get:
+        mock_response = AsyncMock()
+        mock_response.json.return_value = mock_station_data
+        mock_response.status = 200
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value.__aenter__.return_value = mock_response
+
+        async with client:
+            station = await client.fetch_hydro_station("station_1")
+
+        assert station.code == "station_1"
+        assert station.name == "Station 1"
+
+
+@pytest.mark.asyncio
+async def test_fetch_hydro_station_error(client):
+    """Test handling error when fetching a specific hydro station"""
+    with patch("aiohttp.ClientSession.get") as mock_get:
+        mock_response = AsyncMock()
+        mock_response.status = 404
+        mock_get.return_value.__aenter__.return_value = mock_response
+
+        with pytest.raises(Exception, match="API returned status 404"):
+            async with client:
+                await client.fetch_hydro_station("nonexistent")
+
+
+@pytest.mark.asyncio
+async def test_fetch_hydro_observation_data(client):
+    """Test fetching hydro observation data"""
+    mock_observation_data = {
+        "station": {
+            "code": "station_1",
+            "name": "Station 1",
+            "waterBody": "River",
+            "coordinates": {"latitude": 54.0, "longitude": 24.0},
+        },
+        "observationsDataRange": "2023-01-01 to 2023-01-31",
+        "observations": [
+            {
+                "observationTimeUtc": "2023-01-01 12:00:00",
+                "waterLevel": 1.5,
+                "waterTemperature": 5.0,
+                "waterDischarge": 100.0,
+            }
+        ],
+    }
+
+    with patch("aiohttp.ClientSession.get") as mock_get:
+        mock_response = AsyncMock()
+        mock_response.json.return_value = mock_observation_data
+        mock_response.status = 200
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value.__aenter__.return_value = mock_response
+
+        async with client:
+            obs_data = await client.fetch_hydro_observation_data("station_1")
+
+        assert obs_data.station.code == "station_1"
+        assert len(obs_data.observations) == 1
+        assert obs_data.observations[0].water_level == 1.5
+
+
+@pytest.mark.asyncio
+async def test_fetch_hydro_observation_data_error(client):
+    """Test handling error when fetching hydro observation data"""
+    with patch("aiohttp.ClientSession.get") as mock_get:
+        mock_response = AsyncMock()
+        mock_response.status = 500
+        mock_get.return_value.__aenter__.return_value = mock_response
+
+        with pytest.raises(Exception, match="API returned status 500"):
+            async with client:
+                await client.fetch_hydro_observation_data("station_1")
+
+
+@pytest.mark.asyncio
+async def test_client_context_manager(client):
+    """Test client as async context manager"""
+    async with client:
+        assert client._session is not None
+
+
+@pytest.mark.asyncio
+async def test_client_close(client):
+    """Test closing client"""
+    async with client:
+        pass
+    # After exiting context, session should be closed
+    assert client._session is None
+
+
+@pytest.mark.asyncio
+async def test_client_get_session_creates_session(client):
+    """Test that _get_session creates a session if none exists"""
+    session = await client._get_session()
+    assert session is not None
+    assert client._session is not None
+    await client.close()
+
+
+@pytest.mark.asyncio
+async def test_client_reuse_existing_session(client):
+    """Test that client reuses existing session"""
+    session1 = await client._get_session()
+    session2 = await client._get_session()
+    assert session1 is session2
+    await client.close()
+
+
+@pytest.mark.asyncio
+async def test_client_with_external_session():
+    """Test client with externally managed session"""
+    async with aiohttp.ClientSession() as external_session:
+        client = MeteoLtClient(session=external_session)
+        assert client._session is external_session
+        assert not client._owns_session
+
+        # Client should not close external session
+        await client.close()
+        # External session should still be usable
+        assert not external_session.closed

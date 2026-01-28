@@ -1,11 +1,17 @@
 """MeteoLt API client for external API calls"""
 
 import json
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 import aiohttp
 
-from .models import Place, Forecast
+from .models import (
+    Place,
+    Forecast,
+    HydroStation,
+    HydroObservationData,
+    HydroObservation,
+)
 from .const import BASE_URL, WARNINGS_URL, TIMEOUT, ENCODING
 
 
@@ -25,11 +31,16 @@ class MeteoLtClient:
             )
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(
+        self,
+        exc_type: Optional[type],
+        exc_val: Optional[Exception],
+        exc_tb: Optional[Any],
+    ) -> None:
         """Async context manager exit"""
         await self.close()
 
-    async def close(self):
+    async def close(self) -> None:
         """Close the client session if we own it"""
         if self._session and self._owns_session:
             await self._session.close()
@@ -55,14 +66,12 @@ class MeteoLtClient:
     async def fetch_forecast(self, place_code: str) -> Forecast:
         """Retrieves forecast data from API"""
         session = await self._get_session()
-        async with session.get(
-            f"{BASE_URL}/places/{place_code}/forecasts/long-term"
-        ) as response:
+        async with session.get(f"{BASE_URL}/places/{place_code}/forecasts/long-term") as response:
             response.encoding = ENCODING
             response_json = await response.json()
             return Forecast.from_dict(response_json)
 
-    async def fetch_weather_warnings(self) -> List[dict]:
+    async def fetch_weather_warnings(self) -> Dict[str, Any]:
         """Fetches raw weather warnings data from meteo.lt JSON API"""
         session = await self._get_session()
 
@@ -78,3 +87,77 @@ class MeteoLtClient:
         async with session.get(latest_file_url) as response:
             text_data = await response.text()
             return json.loads(text_data)
+
+    async def fetch_hydro_stations(self) -> List[HydroStation]:
+        """Get list of all hydrological stations."""
+        session = await self._get_session()
+        async with session.get(f"{BASE_URL}/hydro-stations") as resp:
+            if resp.status == 200:
+                response = await resp.json()
+                stations = []
+                for station_data in response:
+                    stations.append(
+                        HydroStation(
+                            code=station_data.get("code"),
+                            name=station_data.get("name"),
+                            water_body=station_data.get("waterBody"),
+                            coordinates=station_data.get("coordinates", {}),
+                        )
+                    )
+                return stations
+            else:
+                raise Exception(f"API returned status {resp.status}")
+
+    async def fetch_hydro_station(self, station_code: str) -> HydroStation:
+        """Get information about a specific hydrological station."""
+        session = await self._get_session()
+        async with session.get(f"{BASE_URL}/hydro-stations/{station_code}") as resp:
+            if resp.status == 200:
+                response = await resp.json()
+                return HydroStation(
+                    code=response.get("code"),
+                    name=response.get("name"),
+                    water_body=response.get("waterBody"),
+                    coordinates=response.get("coordinates", {}),
+                )
+            else:
+                raise Exception(f"API returned status {resp.status}")
+
+    async def fetch_hydro_observation_data(
+        self,
+        station_code: str,
+        observation_type: str = "measured",
+        date: str = "latest",
+    ) -> HydroObservationData:
+        """Get hydrological observation data for a station."""
+        session = await self._get_session()
+        async with session.get(
+            f"{BASE_URL}/hydro-stations/{station_code}/observations/{observation_type}/{date}"
+        ) as resp:
+            if resp.status == 200:
+                response = await resp.json()
+                station = HydroStation(
+                    code=response["station"].get("code"),
+                    name=response["station"].get("name"),
+                    water_body=response["station"].get("waterBody"),
+                    coordinates=response["station"].get("coordinates", {}),
+                )
+
+                observations = []
+                for obs_data in response.get("observations", []):
+                    observations.append(
+                        HydroObservation(
+                            observation_datetime=obs_data.get("observationTimeUtc"),
+                            water_level=obs_data.get("waterLevel"),
+                            water_temperature=obs_data.get("waterTemperature"),
+                            water_discharge=obs_data.get("waterDischarge"),
+                        )
+                    )
+
+                return HydroObservationData(
+                    station=station,
+                    observations_data_range=response.get("observationsDataRange"),
+                    observations=observations,
+                )
+            else:
+                raise Exception(f"API returned status {resp.status}")
