@@ -1,9 +1,8 @@
 """utils.py"""
 
 from math import radians, sin, cos, sqrt, atan2
-from typing import TypeVar, List
-
-LocationT = TypeVar("LocationT")  # Type variable for location objects with latitude/longitude
+from typing import List
+from meteo_lt.models import LocationBase
 
 
 def haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -20,7 +19,7 @@ def haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return r * c
 
 
-def find_nearest_location(latitude: float, longitude: float, locations: List[LocationT]) -> LocationT:
+def find_nearest_location(latitude: float, longitude: float, locations: List[LocationBase]) -> LocationBase:
     """Find the nearest location from a list of locations based on the given latitude and longitude."""
     nearest_location = None
     min_distance = float("inf")

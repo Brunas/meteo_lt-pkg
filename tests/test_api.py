@@ -121,9 +121,7 @@ class TestMeteoLtAPI(unittest.IsolatedAsyncioTestCase):
         # Test with no parameters
         with self.assertRaises(ValueError) as context:
             await self.meteo_lt_api.get_forecast_with_warnings()
-        self.assertIn(
-            "Either place_code or both latitude and longitude", str(context.exception)
-        )
+        self.assertIn("Either place_code or both latitude and longitude", str(context.exception))
 
         # Test with only latitude
         with self.assertRaises(ValueError):

@@ -93,17 +93,11 @@ class MeteoLtClient:
         session = await self._get_session()
         async with session.get(f"{BASE_URL}/hydro-stations") as resp:
             if resp.status == 200:
+                resp.encoding = ENCODING
                 response = await resp.json()
                 stations = []
                 for station_data in response:
-                    stations.append(
-                        HydroStation(
-                            code=station_data.get("code"),
-                            name=station_data.get("name"),
-                            water_body=station_data.get("waterBody"),
-                            coordinates=station_data.get("coordinates", {}),
-                        )
-                    )
+                    stations.append(HydroStation.from_dict(station_data))
                 return stations
             else:
                 raise Exception(f"API returned status {resp.status}")
@@ -113,13 +107,9 @@ class MeteoLtClient:
         session = await self._get_session()
         async with session.get(f"{BASE_URL}/hydro-stations/{station_code}") as resp:
             if resp.status == 200:
+                resp.encoding = ENCODING
                 response = await resp.json()
-                return HydroStation(
-                    code=response.get("code"),
-                    name=response.get("name"),
-                    water_body=response.get("waterBody"),
-                    coordinates=response.get("coordinates", {}),
-                )
+                return HydroStation.from_dict(response)
             else:
                 raise Exception(f"API returned status {resp.status}")
 
@@ -136,23 +126,11 @@ class MeteoLtClient:
         ) as resp:
             if resp.status == 200:
                 response = await resp.json()
-                station = HydroStation(
-                    code=response["station"].get("code"),
-                    name=response["station"].get("name"),
-                    water_body=response["station"].get("waterBody"),
-                    coordinates=response["station"].get("coordinates", {}),
-                )
+                station = await self.fetch_hydro_station(station_code)
 
                 observations = []
                 for obs_data in response.get("observations", []):
-                    observations.append(
-                        HydroObservation(
-                            observation_datetime=obs_data.get("observationTimeUtc"),
-                            water_level=obs_data.get("waterLevel"),
-                            water_temperature=obs_data.get("waterTemperature"),
-                            water_discharge=obs_data.get("waterDischarge"),
-                        )
-                    )
+                    observations.append(HydroObservation.from_dict(obs_data))
 
                 return HydroObservationData(
                     station=station,
