@@ -99,8 +99,7 @@ class MeteoLtClient:
                 for station_data in response:
                     stations.append(HydroStation.from_dict(station_data))
                 return stations
-            else:
-                raise Exception(f"API returned status {resp.status}")
+            raise aiohttp.ClientError(f"API returned status {resp.status}")
 
     async def fetch_hydro_station(self, station_code: str) -> HydroStation:
         """Get information about a specific hydrological station."""
@@ -110,8 +109,7 @@ class MeteoLtClient:
                 resp.encoding = ENCODING
                 response = await resp.json()
                 return HydroStation.from_dict(response)
-            else:
-                raise Exception(f"API returned status {resp.status}")
+            raise aiohttp.ClientError(f"API returned status {resp.status}")
 
     async def fetch_hydro_observation_data(
         self,
@@ -137,5 +135,4 @@ class MeteoLtClient:
                     observations_data_range=response.get("observationsDataRange"),
                     observations=observations,
                 )
-            else:
-                raise Exception(f"API returned status {resp.status}")
+            raise aiohttp.ClientError(f"API returned status {resp.status}")
