@@ -1,4 +1,4 @@
-## Release 0.5.0
+## Release 0.5.1
 
 Date: `2026-01-29`
 
@@ -6,6 +6,13 @@ Date: `2026-01-29`
 
 - Hydro observations implemented
 - Python code clean-up
+
+## Release 0.5.0
+
+Date: `2026-01-29`
+
+### Changes
+
 - Usual version bumps
 
 ## Release 0.4.0

@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 import pytest_asyncio
 
-from meteo_lt import MeteoLtAPI, WeatherWarning
+from meteo_lt import MeteoLtAPI
 
 
 @pytest_asyncio.fixture
