@@ -65,17 +65,17 @@ class WeatherWarning:
 class HydroStation(LocationBase):
     """Hydrological station data."""
 
-    water_body: str
+    water_body: str = field(metadata={"json_key": "waterBody"})
 
 
 @dataclass
 class HydroObservation:
     """Single hydrological observation."""
 
-    observation_datetime: Optional[str] = None
-    water_level: Optional[float] = None  # cm
-    water_temperature: Optional[float] = None  # °C
-    water_discharge: Optional[float] = None  # m3/s
+    observation_datetime: Optional[str] = field(default=None, metadata={"json_key": "observationTimeUtc"})
+    water_level: Optional[float] = field(default=None, metadata={"json_key": "waterLevel"})  # cm
+    water_temperature: Optional[float] = field(default=None, metadata={"json_key": "waterTemperature"})  # °C
+    water_discharge: Optional[float] = field(default=None, metadata={"json_key": "waterDischarge"})  # m3/s
 
 
 @dataclass
@@ -83,7 +83,7 @@ class HydroObservationData:
     """Observation data response."""
 
     station: HydroStation
-    observations_data_range: Optional[dict] = None
+    observations_data_range: Optional[dict] = field(default=None, metadata={"json_key": "observationsDataRange"})
     observations: List[HydroObservation] = field(default_factory=list)
 
 

@@ -126,7 +126,7 @@ class MeteoLtClient:
         ) as resp:
             if resp.status == 200:
                 response = await resp.json()
-                station = await self.fetch_hydro_station(station_code)
+                station = HydroStation.from_dict(response.get("station"))
 
                 observations = []
                 for obs_data in response.get("observations", []):
