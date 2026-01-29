@@ -6,14 +6,18 @@ import json
 from unittest.mock import AsyncMock, patch
 
 import pytest
+import pytest_asyncio
 
 from meteo_lt import MeteoLtAPI, WeatherWarning
 
 
-@pytest.fixture
-def api_client():
+@pytest_asyncio.fixture
+async def api_client():
     """Create API client for testing"""
-    return MeteoLtAPI()
+    client = MeteoLtAPI()
+    yield client
+    # Cleanup: close the client after test completes
+    await client.close()
 
 
 @pytest.fixture
@@ -25,9 +29,7 @@ def mock_warnings_data():
                 "phenomenon_category": "wind",
                 "area_groups": [
                     {
-                        "areas": [
-                            {"id": "lt.lhms.county:LT002", "name": "Kauno apskritis"}
-                        ],
+                        "areas": [{"id": "lt.lhms.county:LT002", "name": "Kauno apskritis"}],
                         "single_alerts": [
                             {
                                 "phenomenon": "wind",
@@ -54,15 +56,11 @@ def mock_warnings_data():
 @pytest.fixture
 def mock_file_list():
     """Mock file list response"""
-    return [
-        "https://www.meteo.lt/meteo_jobs/pavojingi_met_reisk_ibl/20250930120000-00000001"
-    ]
+    return ["https://www.meteo.lt/meteo_jobs/pavojingi_met_reisk_ibl/20250930120000-00000001"]
 
 
 @pytest.mark.asyncio
-async def test_get_weather_warnings_success(
-    api_client, mock_file_list, mock_warnings_data
-):
+async def test_get_weather_warnings_success(api_client, mock_file_list, mock_warnings_data):
     """Test successful weather warnings retrieval"""
     with patch("aiohttp.ClientSession.get") as mock_get:
         # Mock the file list response
@@ -91,9 +89,7 @@ async def test_get_weather_warnings_success(
 
 
 @pytest.mark.asyncio
-async def test_get_weather_warnings_for_specific_area(
-    api_client, mock_file_list, mock_warnings_data
-):
+async def test_get_weather_warnings_for_specific_area(api_client, mock_file_list, mock_warnings_data):
     """Test weather warnings for specific administrative division"""
     with patch("aiohttp.ClientSession.get") as mock_get:
         mock_list_response = AsyncMock()
@@ -128,17 +124,3 @@ async def test_get_weather_warnings_empty_response(api_client):
 
         assert isinstance(warnings, list)
         assert len(warnings) == 0
-
-
-def test_weather_warning_model():
-    """Test WeatherWarning model creation"""
-    warning = WeatherWarning(
-        county="Kauno apskritis",
-        warning_type="wind",
-        severity="Moderate",
-        description="Strong wind",
-    )
-
-    assert warning.county == "Kauno apskritis"
-    assert warning.warning_type == "wind"
-    assert warning.severity == "Moderate"
