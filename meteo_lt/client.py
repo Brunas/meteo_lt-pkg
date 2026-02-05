@@ -12,7 +12,7 @@ from .models import (
     HydroObservationData,
     HydroObservation,
 )
-from .const import BASE_URL, WARNINGS_URL, TIMEOUT, ENCODING
+from .const import BASE_URL, TIMEOUT, ENCODING
 
 
 class MeteoLtClient:
@@ -71,12 +71,12 @@ class MeteoLtClient:
             response_json = await response.json()
             return Forecast.from_dict(response_json)
 
-    async def fetch_weather_warnings(self) -> Dict[str, Any]:
-        """Fetches raw weather warnings data from meteo.lt JSON API"""
+    async def fetch_warnings(self, warnings_url: str) -> Dict[str, Any]:
+        """Fetches raw warnings data from meteo.lt JSON API"""
         session = await self._get_session()
 
         # Get the latest warnings file
-        async with session.get(WARNINGS_URL) as response:
+        async with session.get(warnings_url) as response:
             file_list = await response.json()
 
         if not file_list:

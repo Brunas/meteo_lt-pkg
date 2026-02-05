@@ -1,23 +1,30 @@
-"""Weather warnings processor for handling warning-related logic"""
+"""Unified warnings processor for handling weather and hydrological warning-related logic"""
 
 import re
 from datetime import datetime, timezone
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Literal
 
-from .models import Forecast, WeatherWarning
-from .const import COUNTY_MUNICIPALITIES
+from .models import Forecast, MeteoWarning
+from .const import COUNTY_MUNICIPALITIES, WARNINGS_URL, HYDRO_WARNINGS_URL
 from .client import MeteoLtClient
 
+WarningCategory = Literal["weather", "hydro"]
 
-class WeatherWarningsProcessor:
-    """Processes weather warnings data and handles warning-related logic"""
 
-    def __init__(self, client: MeteoLtClient):
+class WarningsProcessor:
+    """Processes weather and hydrological warnings data and handles warning-related logic"""
+
+    def __init__(self, client: MeteoLtClient, category: WarningCategory = "weather"):
         self.client = client
+        self.category = category
 
-    async def get_weather_warnings(self, administrative_division: str = None) -> List[WeatherWarning]:
-        """Fetches and processes weather warnings"""
-        warnings_data = await self.client.fetch_weather_warnings()
+    async def get_warnings(self, administrative_division: str = None) -> List[MeteoWarning]:
+        """Fetches and processes warnings (weather or hydro based on category)"""
+        # Determine URL based on category
+        warnings_url = HYDRO_WARNINGS_URL if self.category == "hydro" else WARNINGS_URL
+
+        # Fetch warnings data
+        warnings_data = await self.client.fetch_warnings(warnings_url)
         warnings = self._parse_warnings_data(warnings_data)
 
         # Filter by administrative division if specified
@@ -26,8 +33,8 @@ class WeatherWarningsProcessor:
 
         return warnings
 
-    def _parse_warnings_data(self, warnings_data: Optional[Dict[str, Any]]) -> List[WeatherWarning]:
-        """Parse raw warnings data into WeatherWarning objects"""
+    def _parse_warnings_data(self, warnings_data: Optional[Dict[str, Any]]) -> List[MeteoWarning]:
+        """Parse raw warnings data into MeteoWarning objects"""
         warnings = []
 
         # Handle empty response (list instead of dict)
@@ -36,8 +43,12 @@ class WeatherWarningsProcessor:
 
         # Parse the warnings data
         for phenomenon_group in warnings_data.get("phenomenon_groups", []):
-            # Skip hydrological warnings if needed (they're usually for water levels)
-            if phenomenon_group.get("phenomenon_category") == "hydrological":
+            phenomenon_category = phenomenon_group.get("phenomenon_category")
+
+            # Filter based on category
+            if self.category == "hydro" and phenomenon_category != "hydrological":
+                continue
+            if self.category == "weather" and phenomenon_category == "hydrological":
                 continue
 
             for area_group in phenomenon_group.get("area_groups", []):
@@ -54,8 +65,8 @@ class WeatherWarningsProcessor:
 
         return warnings
 
-    def _create_warning_from_alert(self, alert: Dict[str, Any], area: Dict[str, Any]) -> WeatherWarning:
-        """Create a WeatherWarning from alert data"""
+    def _create_warning_from_alert(self, alert: Dict[str, Any], area: Dict[str, Any]) -> MeteoWarning:
+        """Create a MeteoWarning from alert data"""
         county = area.get("name", "Unknown")
         phenomenon = alert.get("phenomenon", "")
         severity = alert.get("severity", "Minor")
@@ -72,16 +83,17 @@ class WeatherWarningsProcessor:
         if instruction:
             full_description += f"\n\nRecommendations: {instruction}"
 
-        return WeatherWarning(
+        return MeteoWarning(
             county=county,
             warning_type=warning_type,
             severity=severity,
             description=full_description,
+            category=self.category,
             start_time=alert.get("t_from"),
             end_time=alert.get("t_to"),
         )
 
-    def _warning_affects_area(self, warning: WeatherWarning, administrative_division: str) -> bool:
+    def _warning_affects_area(self, warning: MeteoWarning, administrative_division: str) -> bool:
         """Check if warning affects specified administrative division"""
         admin_lower = administrative_division.lower().replace(" savivaldybė", "").replace(" sav.", "")
 
@@ -99,22 +111,31 @@ class WeatherWarningsProcessor:
 
         return False
 
-    def enrich_forecast_with_warnings(self, forecast: Forecast, warnings: List[WeatherWarning]) -> None:
-        """Enrich forecast timestamps with relevant weather warnings"""
+    def enrich_forecast_with_warnings(self, forecast: Forecast, warnings: List[MeteoWarning]) -> None:
+        """Enrich forecast timestamps with relevant warnings
+
+        All warnings (weather and hydro) are added to 'warnings' attribute
+        """
         if not warnings:
             return
 
         # For each forecast timestamp, find applicable warnings
         for timestamp in forecast.forecast_timestamps:
-            timestamp.warnings = self._get_warnings_for_timestamp(timestamp.datetime, warnings)
+            # Initialize warnings list if it doesn't exist
+            if not hasattr(timestamp, "warnings"):
+                timestamp.warnings = []
+            # Get warnings for this timestamp and extend the list
+            applicable_warnings = self._get_warnings_for_timestamp(timestamp.datetime, warnings)
+            timestamp.warnings.extend(applicable_warnings)
 
         # Also add warnings to current conditions if available
         if hasattr(forecast, "current_conditions") and forecast.current_conditions:
-            forecast.current_conditions.warnings = self._get_warnings_for_timestamp(
-                forecast.current_conditions.datetime, warnings
-            )
+            if not hasattr(forecast.current_conditions, "warnings"):
+                forecast.current_conditions.warnings = []
+            applicable_warnings = self._get_warnings_for_timestamp(forecast.current_conditions.datetime, warnings)
+            forecast.current_conditions.warnings.extend(applicable_warnings)
 
-    def _get_warnings_for_timestamp(self, timestamp_str: str, warnings: List[WeatherWarning]) -> List[WeatherWarning]:
+    def _get_warnings_for_timestamp(self, timestamp_str: str, warnings: List[MeteoWarning]) -> List[MeteoWarning]:
         """Get warnings that are active for a specific timestamp"""
         try:
             timestamp = datetime.fromisoformat(timestamp_str).replace(tzinfo=timezone.utc)

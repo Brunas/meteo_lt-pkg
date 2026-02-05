@@ -50,13 +50,14 @@ class Place(LocationBase):
 
 
 @dataclass
-class WeatherWarning:
-    """Weather Warning"""
+class MeteoWarning:
+    """Meteorological Warning (includes both weather and hydrological warnings)"""
 
     county: str
     warning_type: str
     severity: str
     description: str
+    category: str = "weather"  # "weather" or "hydro"
     start_time: Optional[str] = None
     end_time: Optional[str] = None
 
@@ -102,7 +103,7 @@ class ForecastTimestamp:
     pressure: float = field(metadata={"json_key": "seaLevelPressure"})
     humidity: float = field(metadata={"json_key": "relativeHumidity"})
     precipitation: float = field(metadata={"json_key": "totalPrecipitation"})
-    warnings: List[WeatherWarning] = field(default_factory=list, init=False)
+    warnings: List[MeteoWarning] = field(default_factory=list, init=False)
 
 
 @dataclass
@@ -169,7 +170,7 @@ Coordinates.from_dict = classmethod(from_dict)
 Place.from_dict = classmethod(from_dict)
 ForecastTimestamp.from_dict = classmethod(from_dict)
 Forecast.from_dict = classmethod(from_dict)
-WeatherWarning.from_dict = classmethod(from_dict)
+MeteoWarning.from_dict = classmethod(from_dict)
 HydroStation.from_dict = classmethod(from_dict)
 HydroObservation.from_dict = classmethod(from_dict)
 HydroObservationData.from_dict = classmethod(from_dict)
