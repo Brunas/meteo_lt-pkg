@@ -1,17 +1,18 @@
 """Main API class script"""
 
+import asyncio
 from typing import List, Optional
 
 from .models import (
     Forecast,
     Place,
-    WeatherWarning,
+    MeteoWarning,
     HydroStation,
     HydroObservationData,
 )
 from .utils import find_nearest_location
 from .client import MeteoLtClient
-from .warnings import WeatherWarningsProcessor
+from .warnings import WarningsProcessor
 
 
 class MeteoLtAPI:
@@ -20,7 +21,8 @@ class MeteoLtAPI:
     def __init__(self, session=None):
         self.places = []
         self.client = MeteoLtClient(session)
-        self.warnings_processor = WeatherWarningsProcessor(self.client)
+        self.warnings_processor = WarningsProcessor(self.client, category="weather")
+        self.hydro_warnings_processor = WarningsProcessor(self.client, category="hydro")
 
     async def __aenter__(self):
         """Async context manager entry"""
@@ -56,7 +58,7 @@ class MeteoLtAPI:
         longitude: Optional[float] = None,
         place_code: Optional[str] = None,
     ) -> Forecast:
-        """Get forecast with weather warnings for a location"""
+        """Get forecast with all warnings (weather and hydrological) for a location"""
         if place_code is None:
             if latitude is None or longitude is None:
                 raise ValueError("Either place_code or both latitude and longitude must be provided")
@@ -65,7 +67,7 @@ class MeteoLtAPI:
 
         return await self.get_forecast(place_code, include_warnings=True)
 
-    async def get_forecast(self, place_code: str, include_warnings: bool = True) -> Forecast:
+    async def get_forecast(self, place_code: str, include_warnings: bool = False) -> Forecast:
         """Retrieves forecast data from API"""
         forecast = await self.client.fetch_forecast(place_code)
 
@@ -74,27 +76,39 @@ class MeteoLtAPI:
 
         return forecast
 
-    async def get_weather_warnings(self, administrative_division: str = None) -> List[WeatherWarning]:
+    async def get_weather_warnings(self, administrative_division: str = None) -> List[MeteoWarning]:
         """Fetches weather warnings from meteo.lt JSON API"""
-        return await self.warnings_processor.get_weather_warnings(administrative_division)
+        return await self.warnings_processor.get_warnings(administrative_division)
+
+    async def get_hydro_warnings(self, administrative_division: str = None) -> List[MeteoWarning]:
+        """Fetches hydrological warnings from meteo.lt JSON API"""
+        return await self.hydro_warnings_processor.get_warnings(administrative_division)
+
+    async def get_all_warnings(self, administrative_division: str = None) -> List[MeteoWarning]:
+        """Fetches both weather and hydrological warnings from meteo.lt JSON API"""
+        weather_task = self.warnings_processor.get_warnings(administrative_division)
+        hydro_task = self.hydro_warnings_processor.get_warnings(administrative_division)
+        weather_warnings, hydro_warnings = await asyncio.gather(weather_task, hydro_task)
+        return weather_warnings + hydro_warnings
 
     async def _enrich_forecast_with_warnings(self, forecast: Forecast) -> None:
-        """Enrich forecast timestamps with relevant weather warnings"""
+        """Enrich forecast timestamps with all relevant warnings (weather and hydrological)"""
         if not forecast or not forecast.place or not forecast.place.administrative_division:
             return
 
-        warnings = await self.get_weather_warnings(forecast.place.administrative_division)
+        all_warnings = await self.get_all_warnings(forecast.place.administrative_division)
 
-        if warnings:
-            self.warnings_processor.enrich_forecast_with_warnings(forecast, warnings)
+        if all_warnings:
+            # Use weather processor to enrich (logic is the same for both)
+            self.warnings_processor.enrich_forecast_with_warnings(forecast, all_warnings)
 
-    async def get_hydro_stations(self) -> List[HydroStation]:
+    async def fetch_hydro_stations(self) -> List[HydroStation]:
         """Get list of all hydrological stations"""
         return await self.client.fetch_hydro_stations()
 
     async def get_nearest_hydro_station(self, latitude: float, longitude: float) -> Optional[HydroStation]:
         """Find the nearest hydrological station to given coordinates"""
-        stations = await self.get_hydro_stations()
+        stations = await self.fetch_hydro_stations()
         if not stations:
             return None
         return find_nearest_location(latitude, longitude, stations)

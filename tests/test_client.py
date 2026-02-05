@@ -141,7 +141,9 @@ async def test_fetch_weather_warnings(client):
         ]
 
         async with client:
-            warnings_data = await client.fetch_weather_warnings()
+            from meteo_lt.const import WARNINGS_URL
+
+            warnings_data = await client.fetch_warnings(WARNINGS_URL)
 
         assert isinstance(warnings_data, dict)
         assert "phenomenon_groups" in warnings_data
@@ -157,7 +159,9 @@ async def test_fetch_weather_warnings_empty(client):
         mock_get.return_value.__aenter__.return_value = mock_response
 
         async with client:
-            warnings_data = await client.fetch_weather_warnings()
+            from meteo_lt.const import WARNINGS_URL
+
+            warnings_data = await client.fetch_warnings(WARNINGS_URL)
 
         assert warnings_data == []
 

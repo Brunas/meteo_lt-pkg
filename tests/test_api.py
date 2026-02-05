@@ -162,9 +162,48 @@ class TestMeteoLtAPI(unittest.IsolatedAsyncioTestCase):
 
             self.assertEqual(result, mock_forecast)
 
+    async def test_get_forecast_with_warnings_enabled(self):
+        """Test getting forecast with warnings enabled (include_warnings=True)"""
+        with (
+            patch.object(self.meteo_lt_api.client, "fetch_forecast") as mock_fetch,
+            patch.object(self.meteo_lt_api, "_enrich_forecast_with_warnings") as mock_enrich,
+        ):
+            mock_place = Place(
+                code="test_code",
+                name="Test",
+                country_code="LT",
+                administrative_division="Test Admin",
+                coordinates=Coordinates(latitude=1.0, longitude=2.0),
+            )
+            mock_timestamp = ForecastTimestamp(
+                datetime="2023-01-01 12:00:00",
+                temperature=15.0,
+                apparent_temperature=14.0,
+                condition_code="clear",
+                wind_speed=5.0,
+                wind_gust_speed=8.0,
+                wind_bearing=180.0,
+                cloud_coverage=10,
+                pressure=1013.25,
+                humidity=65,
+                precipitation=0.0,
+            )
+            mock_forecast = Forecast(
+                place=mock_place,
+                forecast_created="2023-01-01 12:00:00",
+                current_conditions=mock_timestamp,
+                forecast_timestamps=[],
+            )
+            mock_fetch.return_value = mock_forecast
+
+            result = await self.meteo_lt_api.get_forecast("test_code", include_warnings=True)
+
+            mock_enrich.assert_called_once_with(mock_forecast)
+            self.assertEqual(result, mock_forecast)
+
     async def test_get_weather_warnings(self):
         """Test getting weather warnings"""
-        with patch.object(self.meteo_lt_api.warnings_processor, "get_weather_warnings") as mock_get:
+        with patch.object(self.meteo_lt_api.warnings_processor, "get_warnings") as mock_get:
             mock_warnings = []
             mock_get.return_value = mock_warnings
 
@@ -239,13 +278,13 @@ class TestMeteoLtAPI(unittest.IsolatedAsyncioTestCase):
             mock_stations = []
             mock_fetch.return_value = mock_stations
 
-            result = await self.meteo_lt_api.get_hydro_stations()
+            result = await self.meteo_lt_api.fetch_hydro_stations()
 
             self.assertEqual(result, mock_stations)
 
     async def test_get_nearest_hydro_station(self):
         """Test getting nearest hydro station"""
-        with patch.object(self.meteo_lt_api, "get_hydro_stations") as mock_get:
+        with patch.object(self.meteo_lt_api, "fetch_hydro_stations") as mock_get:
             mock_station = HydroStation(
                 code="test_code",
                 name="Test Station",
@@ -260,7 +299,7 @@ class TestMeteoLtAPI(unittest.IsolatedAsyncioTestCase):
 
     async def test_get_nearest_hydro_station_no_stations(self):
         """Test getting nearest hydro station when no stations exist"""
-        with patch.object(self.meteo_lt_api, "get_hydro_stations") as mock_get:
+        with patch.object(self.meteo_lt_api, "fetch_hydro_stations") as mock_get:
             mock_get.return_value = []
 
             result = await self.meteo_lt_api.get_nearest_hydro_station(1.0, 2.0)
@@ -293,6 +332,92 @@ class TestMeteoLtAPI(unittest.IsolatedAsyncioTestCase):
 
             self.assertEqual(result, mock_obs_data)
             mock_fetch.assert_called_once_with("station_1", "measured", "latest")
+
+    async def test_get_hydro_warnings(self):
+        """Test fetching hydrological warnings"""
+        mock_hydro_warnings = [
+            MagicMock(county="Kauno apskritis", warning_type="flood", severity="High"),
+            MagicMock(county="Vilniaus miesto", warning_type="flood", severity="Moderate"),
+        ]
+
+        with patch.object(self.meteo_lt_api.hydro_warnings_processor, "get_warnings") as mock_get:
+            mock_get.return_value = mock_hydro_warnings
+
+            result = await self.meteo_lt_api.get_hydro_warnings("Kauno apskritis")
+
+            self.assertEqual(result, mock_hydro_warnings)
+            mock_get.assert_called_once_with("Kauno apskritis")
+
+    async def test_get_all_warnings(self):
+        """Test fetching all warnings (weather and hydro combined)"""
+        weather_warnings = [
+            MagicMock(county="Kauno apskritis", warning_type="wind", severity="Moderate"),
+        ]
+        hydro_warnings = [
+            MagicMock(county="Kauno apskritis", warning_type="flood", severity="High"),
+        ]
+
+        with (
+            patch.object(self.meteo_lt_api.warnings_processor, "get_warnings") as mock_weather,
+            patch.object(self.meteo_lt_api.hydro_warnings_processor, "get_warnings") as mock_hydro,
+        ):
+            mock_weather.return_value = weather_warnings
+            mock_hydro.return_value = hydro_warnings
+
+            result = await self.meteo_lt_api.get_all_warnings()
+
+            self.assertEqual(len(result), 2)
+            self.assertEqual(result[0].warning_type, "wind")
+            self.assertEqual(result[1].warning_type, "flood")
+
+    async def test_enrich_forecast_with_warnings_with_valid_data(self):
+        """Test enriching forecast with warnings when all data is valid"""
+        place = Place(
+            code="test_code",
+            name="Test",
+            country_code="LT",
+            administrative_division="Kauno rajono savivaldybė",
+            coordinates=Coordinates(latitude=1.0, longitude=2.0),
+        )
+
+        timestamp = ForecastTimestamp(
+            datetime="2023-01-01 12:00:00",
+            temperature=15.0,
+            apparent_temperature=14.0,
+            condition_code="clear",
+            wind_speed=5.0,
+            wind_gust_speed=8.0,
+            wind_bearing=180.0,
+            cloud_coverage=10,
+            pressure=1013.25,
+            humidity=65,
+            precipitation=0.0,
+        )
+
+        forecast = Forecast(
+            place=place,
+            forecast_created="2023-01-01 12:00:00",
+            current_conditions=timestamp,
+            forecast_timestamps=[timestamp],
+        )
+
+        from meteo_lt.models import MeteoWarning
+
+        mock_warning = MeteoWarning(
+            county="Kauno apskritis",
+            warning_type="wind",
+            severity="Moderate",
+            description="Test warning",
+            start_time="2023-01-01T10:00:00Z",
+            end_time="2023-01-01T14:00:00Z",
+        )
+
+        with patch.object(self.meteo_lt_api, "get_all_warnings") as mock_get_warnings:
+            mock_get_warnings.return_value = [mock_warning]
+
+            await self.meteo_lt_api._enrich_forecast_with_warnings(forecast)
+
+            mock_get_warnings.assert_called_once_with("Kauno rajono savivaldybė")
 
 
 if __name__ == "__main__":

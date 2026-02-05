@@ -9,7 +9,9 @@
                 "kind": "test",
                 "isDefault": true
             },
-            "problemMatcher": ["$pytest"],
+            "problemMatcher": [
+                "$pytest"
+            ],
             "detail": "Runs the unit tests using pytest through Poetry"
         },
         {
@@ -20,7 +22,9 @@
                 "kind": "test",
                 "isDefault": false
             },
-            "problemMatcher": ["$pytest"],
+            "problemMatcher": [
+                "$pytest"
+            ],
             "detail": "Runs the unit tests with coverage using pytest through Poetry"
         },
         {
@@ -31,9 +35,10 @@
                 "kind": "test",
                 "isDefault": false
             },
-            "problemMatcher": ["$pytest"],
+            "problemMatcher": [
+                "$pytest"
+            ],
             "detail": "Runs the unit tests with coverage with generated report using pytest through Poetry"
-        }        
+        }
     ]
 }
-
