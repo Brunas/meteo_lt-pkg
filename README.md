@@ -201,6 +201,66 @@ asyncio.run(fetch_warnings())
 asyncio.run(fetch_warnings_for_area())
 ```
 
+### Fetching Hydrological Warnings
+
+To get hydrological warnings (water-related warnings like floods, high water levels):
+
+```python
+async def fetch_hydro_warnings():
+    async with MeteoLtAPI() as api:
+        # Get all hydrological warnings
+        hydro_warnings = await api.get_hydro_warnings()
+        print(f"Total active hydro warnings: {len(hydro_warnings)}")
+
+        for warning in hydro_warnings:
+            print(f"Hydro Warning: {warning.warning_type} in {warning.county}")
+            print(f"Severity: {warning.severity}")
+            print(f"Description: {warning.description}")
+            print("-" * 50)
+
+async def fetch_hydro_warnings_for_area():
+    async with MeteoLtAPI() as api:
+        # Get hydro warnings for specific administrative division
+        warnings = await api.get_hydro_warnings("Vilniaus miesto")
+        print(f"Hydro warnings for Vilnius: {len(warnings)}")
+
+asyncio.run(fetch_hydro_warnings())
+asyncio.run(fetch_hydro_warnings_for_area())
+```
+
+### Fetching All Warnings (Weather + Hydrological)
+
+To get both weather and hydrological warnings combined:
+
+```python
+async def fetch_all_warnings():
+    async with MeteoLtAPI() as api:
+        # Get all warnings (weather + hydrological)
+        all_warnings = await api.get_all_warnings()
+        print(f"Total active warnings (all types): {len(all_warnings)}")
+
+        for warning in all_warnings:
+            print(f"{warning.warning_type} in {warning.county}")
+            print(f"Severity: {warning.severity}")
+            print(f"Description: {warning.description}")
+            print("-" * 50)
+
+async def fetch_all_warnings_for_area():
+    async with MeteoLtAPI() as api:
+        # Get all warnings for specific administrative division
+        warnings = await api.get_all_warnings("Vilniaus miesto")
+        print(f"All warnings for Vilnius: {len(warnings)}")
+
+        # Separate by type if needed
+        weather_count = sum(1 for w in warnings if w.category == "weather")
+        hydro_count = sum(1 for w in warnings if w.category == "hydro")
+        print(f"  Weather warnings: {weather_count}")
+        print(f"  Hydro warnings: {hydro_count}")
+
+asyncio.run(fetch_all_warnings())
+asyncio.run(fetch_all_warnings_for_area())
+```
+
 ## Data Models
 
 The package includes several data models to represent the API responses:
@@ -223,8 +283,15 @@ Represents a place with associated metadata.
 ```python
 from meteo_lt import Place
 
-place = Place(code="vilnius", name="Vilnius", administrative_division="Vilnius City Municipality", country="LT", coordinates=coords)
+place = Place(
+    code="vilnius",
+    name="Vilnius",
+    administrative_division="Vilniaus miesto",
+    country_code="LT",
+    coordinates=coords
+)
 print(place.latitude, place.longitude)
+print(place.counties)  # List of counties this place belongs to
 ```
 
 ### ForecastTimestamp
@@ -247,7 +314,10 @@ forecast_timestamp = ForecastTimestamp(
     humidity=60,
     precipitation=0
 )
-print(forecast_timestamp.condition)
+print(f"Temperature: {forecast_timestamp.temperature}°C")
+print(f"Condition: {forecast_timestamp.condition_code}")
+# Warnings list is automatically populated when using get_forecast_with_warnings()
+print(f"Warnings: {len(forecast_timestamp.warnings)}")
 ```
 
 ### Forecast
@@ -259,28 +329,46 @@ from meteo_lt import Forecast
 
 forecast = Forecast(
     place=place,
-    forecast_created=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    forecast_created="2024-07-23T12:00:00+00:00",
+    current_conditions=forecast_timestamp,
     forecast_timestamps=[forecast_timestamp]
 )
-print(forecast.current_conditions().temperature)
+# current_conditions is automatically set to the current hour's forecast
+print(f"Current temperature: {forecast.current_conditions.temperature}°C")
+# forecast_timestamps are automatically filtered to exclude past hours
+print(f"Future forecasts: {len(forecast.forecast_timestamps)}")
 ```
 
-### WeatherWarning
+### MeteoWarning
 
-Represents a weather warning for a specific area.
+Represents a meteorological warning (weather or hydrological) for a specific area.
 
 ```python
-from meteo_lt import WeatherWarning
+from meteo_lt import MeteoWarning
 
-warning = WeatherWarning(
+# Weather warning example
+weather_warning = MeteoWarning(
     county="Vilniaus apskritis",
     warning_type="frost",
     severity="Moderate",
     description="Ground surface frost 0-5 degrees in many places",
+    category="weather",
     start_time="2024-07-23T12:00:00Z",
     end_time="2024-07-23T18:00:00Z"
 )
-print(f"Warning for {warning.county}: {warning.description}")
+print(f"Warning for {weather_warning.county}: {weather_warning.description}")
+print(f"Category: {weather_warning.category}")  # "weather" or "hydro"
+
+# Hydrological warning example
+hydro_warning = MeteoWarning(
+    county="Kauno apskritis",
+    warning_type="flood",
+    severity="High",
+    description="High water levels expected",
+    category="hydro",
+    start_time="2024-07-23T12:00:00Z",
+    end_time="2024-07-24T12:00:00Z"
+)
 ```
 
 ### HydroStation
@@ -343,7 +431,7 @@ To get the list of all hydrological stations:
 ```python
 async def fetch_hydro_stations():
     async with MeteoLtAPI() as api:
-        stations = await api.get_hydro_stations()
+        stations = await api.fetch_hydro_stations()
         for station in stations:
             print(f"{station.name} ({station.code}) - Water body: {station.water_body}")
 

@@ -1,3 +1,11 @@
+## Release 0.5.2
+
+Date: `2026-02-05`
+
+### Changes
+
+- Hydro warnings implemented to extend weather warnings
+
 ## Release 0.5.1
 
 Date: `2026-01-29`
