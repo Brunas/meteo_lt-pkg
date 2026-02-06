@@ -53,7 +53,7 @@ class Place(LocationBase):
 class MeteoWarning:
     """Meteorological Warning (includes both weather and hydrological warnings)"""
 
-    county: str
+    administrative_area: str
     warning_type: str
     severity: str
     description: str

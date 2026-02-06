@@ -1,3 +1,11 @@
+## Release 0.6.1
+
+Date: `2026-02-06`
+
+### Changes
+
+- **Renamed `MeteoWarning.county` field to `administrative_area`** to properly represent both counties (apskritis) for weather warnings and municipalities (savivaldybė) for hydrological warnings
+
 ## Release 0.6.0
 
 Date: `2026-02-06`

@@ -195,7 +195,7 @@ async def fetch_warnings():
         print(f"Total active warnings: {len(warnings)}")
 
         for warning in warnings:
-            print(f"Warning: {warning.warning_type} in {warning.county}")
+            print(f"Warning: {warning.warning_type} in {warning.administrative_area}")
             print(f"Severity: {warning.severity}")
             print(f"Description: {warning.description}")
             if warning.instruction:
@@ -228,7 +228,7 @@ async def fetch_hydro_warnings():
         print(f"Total active hydro warnings: {len(hydro_warnings)}")
 
         for warning in hydro_warnings:
-            print(f"Hydro Warning: {warning.warning_type} in {warning.county}")
+            print(f"Hydro Warning: {warning.warning_type} in {warning.administrative_area}")
             print(f"Severity: {warning.severity}")
             print(f"Description: {warning.description}")
             if warning.instruction:
@@ -257,7 +257,7 @@ async def fetch_all_warnings():
         print(f"Total active warnings (all types): {len(all_warnings)}")
 
         for warning in all_warnings:
-            print(f"{warning.warning_type} in {warning.county}")
+            print(f"{warning.warning_type} in {warning.administrative_area}")
             print(f"Severity: {warning.severity}")
             print(f"Description: {warning.description}")
             if warning.instruction:
@@ -367,7 +367,7 @@ from meteo_lt import MeteoWarning
 
 # Weather warning example
 weather_warning = MeteoWarning(
-    county="Vilniaus apskritis",
+    administrative_area="Vilniaus apskritis",
     warning_type="frost",
     severity="Moderate",
     description="Ground surface frost 0-5 degrees in many places",
@@ -376,14 +376,14 @@ weather_warning = MeteoWarning(
     start_time="2024-07-23T12:00:00Z",
     end_time="2024-07-23T18:00:00Z"
 )
-print(f"Warning for {weather_warning.county}: {weather_warning.description}")
+print(f"Warning for {weather_warning.administrative_area}: {weather_warning.description}")
 if weather_warning.instruction:
     print(f"Safety instruction: {weather_warning.instruction}")
 print(f"Category: {weather_warning.category}")  # "weather" or "hydro"
 
 # Hydrological warning example
 hydro_warning = MeteoWarning(
-    county="Kauno apskritis",
+    administrative_area="Kauno apskritis",
     warning_type="flood",
     severity="High",
     description="High water levels expected",

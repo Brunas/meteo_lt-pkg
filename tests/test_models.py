@@ -392,7 +392,7 @@ def test_hydro_observation_data_from_dict():
 def test_meteo_warning_creation(category, warning_type, severity, instruction):
     """Test MeteoWarning creation with various configurations."""
     kwargs = {
-        "county": "Test County",
+        "administrative_area": "Test County",
         "warning_type": warning_type,
         "severity": severity,
         "description": f"Test {warning_type} warning",
@@ -422,7 +422,7 @@ def test_meteo_warning_creation(category, warning_type, severity, instruction):
 def test_meteo_warning_default_category():
     """Test MeteoWarning default category is 'weather'."""
     warning = MeteoWarning(
-        county="Test County",
+        administrative_area="Test County",
         warning_type="wind",
         severity="Low",
         description="Test warning",

@@ -67,7 +67,7 @@ class WarningsProcessor:
 
     def _create_warning_from_alert(self, alert: Dict[str, Any], area: Dict[str, Any]) -> MeteoWarning:
         """Create a MeteoWarning from alert data"""
-        county = area.get("name", "Unknown")
+        administrative_area = area.get("name", "Unknown")
         phenomenon = alert.get("phenomenon", "")
         severity = alert.get("severity", "Minor")
 
@@ -80,7 +80,7 @@ class WarningsProcessor:
         instruction = inst_dict.get("en") or inst_dict.get("lt", "") or None
 
         return MeteoWarning(
-            county=county,
+            administrative_area=administrative_area,
             warning_type=warning_type,
             severity=severity,
             description=description,
@@ -94,13 +94,13 @@ class WarningsProcessor:
         """Check if warning affects specified administrative division"""
         admin_lower = administrative_division.lower().replace(" savivaldybė", "").replace(" sav.", "")
 
-        # Check if the administrative division matches the warning county
-        if admin_lower in warning.county.lower():
+        # Check if the administrative division matches the warning area
+        if admin_lower in warning.administrative_area.lower():
             return True
 
-        # Check if the administrative division is in the warning's county municipalities
-        if warning.county in COUNTY_MUNICIPALITIES:
-            municipalities = COUNTY_MUNICIPALITIES[warning.county]
+        # Check if the administrative division is in the warning area's municipalities
+        if warning.administrative_area in COUNTY_MUNICIPALITIES:
+            municipalities = COUNTY_MUNICIPALITIES[warning.administrative_area]
             for municipality in municipalities:
                 mun_clean = municipality.lower().replace(" savivaldybė", "").replace(" sav.", "")
                 if admin_lower in mun_clean or mun_clean in admin_lower:
