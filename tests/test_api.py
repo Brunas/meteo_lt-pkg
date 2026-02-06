@@ -2,376 +2,292 @@
 
 # pylint: disable=protected-access
 
-import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from meteo_lt.api import MeteoLtAPI
 from meteo_lt.const import BASE_URL
 from meteo_lt.models import (
-    Place,
     Coordinates,
     Forecast,
     ForecastTimestamp,
-    HydroStation,
-    HydroObservationData,
     HydroObservation,
+    HydroObservationData,
+    HydroStation,
+    MeteoWarning,
+    Place,
 )
 
 
-class TestMeteoLtAPI(unittest.IsolatedAsyncioTestCase):
-    """API test class"""
+@pytest.fixture
+def mock_place():
+    """Create a mock place"""
+    return Place(
+        code="test_code",
+        name="Test",
+        country_code="LT",
+        administrative_division="Test Admin",
+        coordinates=Coordinates(latitude=1.0, longitude=2.0),
+    )
 
-    async def asyncSetUp(self):
-        """Test setup"""
-        self.meteo_lt_api = MeteoLtAPI()
 
-    async def asyncTearDown(self):
-        """Test teardown"""
-        await self.meteo_lt_api.close()
+@pytest.fixture
+def mock_timestamp():
+    """Create a mock forecast timestamp"""
+    return ForecastTimestamp(
+        datetime="2023-01-01 12:00:00",
+        temperature=15.0,
+        apparent_temperature=14.0,
+        condition_code="clear",
+        wind_speed=5.0,
+        wind_gust_speed=8.0,
+        wind_bearing=180.0,
+        cloud_coverage=10,
+        pressure=1013.25,
+        humidity=65,
+        precipitation=0.0,
+    )
 
-    async def test_get_nearest_place(self):
-        """Test nearest place"""
-        nearest_place = await self.meteo_lt_api.get_nearest_place(54.97371, 24.00048)
-        self.assertIsNotNone(nearest_place)
-        self.assertEqual("Lapės", nearest_place.name)
-        self.assertEqual("lapes", nearest_place.code)
-        self.assertEqual("LT", nearest_place.country_code)
-        self.assertEqual("Kauno rajono savivaldybė", nearest_place.administrative_division)
-        self.assertEqual(["Kauno apskritis"], nearest_place.counties)
-        print(nearest_place)
 
-    async def test_get_forecast(self):
-        """Test get forecast"""
-        place_code = "lapes"  # Use a real place code
-        forecast = await self.meteo_lt_api.get_forecast(place_code)
-        self.assertIsNotNone(forecast)
-        self.assertIsNotNone(forecast.current_conditions)
-        print(forecast)
-        print(forecast.current_conditions)
+@pytest.fixture
+def mock_forecast(mock_place, mock_timestamp):
+    """Create a mock forecast"""
+    return Forecast(
+        place=mock_place,
+        forecast_created="2023-01-01 12:00:00",
+        current_conditions=mock_timestamp,
+        forecast_timestamps=[],
+    )
 
-    async def test_session_injection(self):
-        """Test that injected session is actually used"""
 
-        mock_session = MagicMock()
+# Tests - Live API Tests (These hit real API)
+@pytest.mark.asyncio
+async def test_get_nearest_place():
+    """Test nearest place"""
+    async with MeteoLtAPI() as api_client:
+        nearest_place = await api_client.get_nearest_place(54.97371, 24.00048)
 
-        mock_response = AsyncMock()
-        mock_response.raise_for_status = MagicMock()
-        mock_response.json = AsyncMock(
-            return_value=[
-                {
-                    "code": "test",
-                    "name": "Test",
-                    "administrativeDivision": "Test savivaldybė",
-                    "countryCode": "LT",
-                    "coordinates": {"latitude": 1.0, "longitude": 2.0},
-                }
-            ]
-        )
-        mock_response.__aenter__ = AsyncMock(return_value=mock_response)
-        mock_response.__aexit__ = AsyncMock(return_value=None)
+        assert nearest_place is not None
+        assert nearest_place.name == "Lapės"
+        assert nearest_place.code == "lapes"
+        assert nearest_place.country_code == "LT"
+        assert nearest_place.administrative_division == "Kauno rajono savivaldybė"
+        assert nearest_place.counties == ["Kauno apskritis"]
 
-        mock_session.get = MagicMock(return_value=mock_response)
 
-        api = MeteoLtAPI(session=mock_session)
-        self.assertIs(api.client._session, mock_session)
+@pytest.mark.asyncio
+async def test_get_forecast():
+    """Test get forecast"""
+    async with MeteoLtAPI() as api_client:
+        forecast = await api_client.get_forecast("lapes")
 
+        assert forecast is not None
+        assert forecast.current_conditions is not None
+
+
+# Tests - Session Management
+@pytest.mark.asyncio
+async def test_session_injection():
+    """Test that injected session is actually used"""
+    mock_session = MagicMock()
+    mock_response = AsyncMock()
+    mock_response.raise_for_status = MagicMock()
+    mock_response.json = AsyncMock(
+        return_value=[
+            {
+                "code": "test",
+                "name": "Test",
+                "administrativeDivision": "Test savivaldybė",
+                "countryCode": "LT",
+                "coordinates": {"latitude": 1.0, "longitude": 2.0},
+            }
+        ]
+    )
+    mock_response.__aenter__ = AsyncMock(return_value=mock_response)
+    mock_response.__aexit__ = AsyncMock(return_value=None)
+    mock_session.get = MagicMock(return_value=mock_response)
+
+    api = MeteoLtAPI(session=mock_session)
+    assert api.client._session is mock_session
+
+    await api.fetch_places()
+
+    mock_session.get.assert_called_once_with(f"{BASE_URL}/places")
+    assert len(api.places) == 1
+    assert api.places[0].code == "test"
+
+
+@pytest.mark.asyncio
+async def test_context_manager():
+    """Test async context manager"""
+    async with MeteoLtAPI() as api:
+        assert api.client._session is not None
         await api.fetch_places()
 
-        mock_session.get.assert_called_once_with(f"{BASE_URL}/places")
-        self.assertEqual(len(api.places), 1)
-        self.assertEqual(api.places[0].code, "test")
 
-    async def test_context_manager(self):
-        """Test async context manager"""
-        async with MeteoLtAPI() as api:
-            self.assertIsNotNone(api.client._session)
-            await api.fetch_places()
+@pytest.mark.asyncio
+async def test_close():
+    """Test close method"""
+    api = MeteoLtAPI()
+    await api.close()
 
-    async def test_close(self):
-        """Test close method"""
-        api = MeteoLtAPI()
-        await api.close()
 
-    async def test_get_forecast_with_warnings_by_coordinates(self):
-        """Test getting forecast with warnings using coordinates"""
+# Tests - Forecast with Warnings
+@pytest.mark.asyncio
+async def test_get_forecast_with_warnings_by_coordinates(mock_place, mock_forecast):
+    """Test getting forecast with warnings using coordinates"""
+    async with MeteoLtAPI() as api_client:
         with (
-            patch.object(self.meteo_lt_api, "get_nearest_place") as mock_nearest,
-            patch.object(self.meteo_lt_api, "get_forecast") as mock_get_forecast,
+            patch.object(api_client, "get_nearest_place") as mock_nearest,
+            patch.object(api_client, "get_forecast") as mock_get_forecast,
         ):
-            mock_place = Place(
-                code="test_code",
-                name="Test",
-                country_code="LT",
-                administrative_division="Test Admin",
-                coordinates=Coordinates(latitude=1.0, longitude=2.0),
-            )
             mock_nearest.return_value = mock_place
-
-            mock_forecast = MagicMock()
             mock_get_forecast.return_value = mock_forecast
 
-            result = await self.meteo_lt_api.get_forecast_with_warnings(latitude=1.0, longitude=2.0)
+            result = await api_client.get_forecast_with_warnings(latitude=1.0, longitude=2.0)
 
             mock_nearest.assert_called_once_with(1.0, 2.0)
             mock_get_forecast.assert_called_once_with("test_code", include_warnings=True)
-            self.assertEqual(result, mock_forecast)
+            assert result == mock_forecast
 
-    async def test_get_forecast_with_warnings_missing_coords_error(self):
-        """Test error when coordinates are missing for forecast with warnings"""
-        # Test with no parameters
-        with self.assertRaises(ValueError) as context:
-            await self.meteo_lt_api.get_forecast_with_warnings()
-        self.assertIn("Either place_code or both latitude and longitude", str(context.exception))
 
-        # Test with only latitude
-        with self.assertRaises(ValueError):
-            await self.meteo_lt_api.get_forecast_with_warnings(latitude=1.0)
+@pytest.mark.parametrize(
+    "kwargs,error_message",
+    [
+        ({}, "Either place_code or both latitude and longitude"),
+        ({"latitude": 1.0}, "Either place_code or both latitude and longitude"),
+        ({"longitude": 2.0}, "Either place_code or both latitude and longitude"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_get_forecast_with_warnings_missing_params(kwargs, error_message):
+    """Test error when required parameters are missing"""
+    async with MeteoLtAPI() as api_client:
+        with pytest.raises(ValueError, match=error_message):
+            await api_client.get_forecast_with_warnings(**kwargs)
 
-    async def test_get_forecast_without_warnings(self):
-        """Test getting forecast without warnings"""
-        with patch.object(self.meteo_lt_api.client, "fetch_forecast") as mock_fetch:
-            mock_place = Place(
-                code="test_code",
-                name="Test",
-                country_code="LT",
-                administrative_division="Test Admin",
-                coordinates=Coordinates(latitude=1.0, longitude=2.0),
-            )
-            mock_timestamp = ForecastTimestamp(
-                datetime="2023-01-01 12:00:00",
-                temperature=15.0,
-                apparent_temperature=14.0,
-                condition_code="clear",
-                wind_speed=5.0,
-                wind_gust_speed=8.0,
-                wind_bearing=180.0,
-                cloud_coverage=10,
-                pressure=1013.25,
-                humidity=65,
-                precipitation=0.0,
-            )
-            mock_forecast = Forecast(
-                place=mock_place,
-                forecast_created="2023-01-01 12:00:00",
-                current_conditions=mock_timestamp,
-                forecast_timestamps=[],
-            )
-            mock_fetch.return_value = mock_forecast
 
-            result = await self.meteo_lt_api.get_forecast("test_code", include_warnings=False)
-
-            self.assertEqual(result, mock_forecast)
-
-    async def test_get_forecast_with_warnings_enabled(self):
-        """Test getting forecast with warnings enabled (include_warnings=True)"""
+@pytest.mark.parametrize("include_warnings", [True, False])
+@pytest.mark.asyncio
+async def test_get_forecast_with_and_without_warnings(mock_forecast, include_warnings):
+    """Test getting forecast with and without warnings"""
+    async with MeteoLtAPI() as api_client:
         with (
-            patch.object(self.meteo_lt_api.client, "fetch_forecast") as mock_fetch,
-            patch.object(self.meteo_lt_api, "_enrich_forecast_with_warnings") as mock_enrich,
+            patch.object(api_client.client, "fetch_forecast") as mock_fetch,
+            patch.object(api_client, "_enrich_forecast_with_warnings") as mock_enrich,
         ):
-            mock_place = Place(
-                code="test_code",
-                name="Test",
-                country_code="LT",
-                administrative_division="Test Admin",
-                coordinates=Coordinates(latitude=1.0, longitude=2.0),
-            )
-            mock_timestamp = ForecastTimestamp(
-                datetime="2023-01-01 12:00:00",
-                temperature=15.0,
-                apparent_temperature=14.0,
-                condition_code="clear",
-                wind_speed=5.0,
-                wind_gust_speed=8.0,
-                wind_bearing=180.0,
-                cloud_coverage=10,
-                pressure=1013.25,
-                humidity=65,
-                precipitation=0.0,
-            )
-            mock_forecast = Forecast(
-                place=mock_place,
-                forecast_created="2023-01-01 12:00:00",
-                current_conditions=mock_timestamp,
-                forecast_timestamps=[],
-            )
             mock_fetch.return_value = mock_forecast
 
-            result = await self.meteo_lt_api.get_forecast("test_code", include_warnings=True)
+            result = await api_client.get_forecast("test_code", include_warnings=include_warnings)
 
-            mock_enrich.assert_called_once_with(mock_forecast)
-            self.assertEqual(result, mock_forecast)
+            mock_fetch.assert_called_once()
+            assert result == mock_forecast
 
-    async def test_get_weather_warnings(self):
-        """Test getting weather warnings"""
-        with patch.object(self.meteo_lt_api.warnings_processor, "get_warnings") as mock_get:
+            if include_warnings:
+                mock_enrich.assert_called_once_with(mock_forecast)
+            else:
+                mock_enrich.assert_not_called()
+
+
+# Tests - Warnings
+@pytest.mark.asyncio
+async def test_get_weather_warnings():
+    """Test getting weather warnings"""
+    async with MeteoLtAPI() as api_client:
+        with patch.object(api_client.warnings_processor, "get_warnings") as mock_get:
             mock_warnings = []
             mock_get.return_value = mock_warnings
 
-            result = await self.meteo_lt_api.get_weather_warnings("Test Division")
+            result = await api_client.get_weather_warnings("Test Division")
 
-            self.assertEqual(result, mock_warnings)
+            assert result == mock_warnings
 
-    async def test_enrich_forecast_with_warnings_no_forecast(self):
-        """Test enriching forecast when forecast is None"""
-        await self.meteo_lt_api._enrich_forecast_with_warnings(None)
 
-    async def test_enrich_forecast_with_warnings_no_place(self):
-        """Test enriching forecast when place is None"""
-        timestamp = ForecastTimestamp(
-            datetime="2023-01-01 12:00:00",
-            temperature=15.0,
-            apparent_temperature=14.0,
-            condition_code="clear",
-            wind_speed=5.0,
-            wind_gust_speed=8.0,
-            wind_bearing=180.0,
-            cloud_coverage=10,
-            pressure=1013.25,
-            humidity=65,
-            precipitation=0.0,
-        )
-        forecast = Forecast(
-            place=None,
-            forecast_created="2023-01-01 12:00:00",
-            current_conditions=timestamp,
-            forecast_timestamps=[],
-        )
-        await self.meteo_lt_api._enrich_forecast_with_warnings(forecast)
-
-    async def test_enrich_forecast_with_warnings_no_admin_division(self):
-        """Test enriching forecast when administrative_division is empty"""
-        # Create a place with a valid administrative_division initially
-        place = Place(
-            code="test_code",
-            name="Test",
-            country_code="LT",
-            administrative_division="Test Admin",
-            coordinates=Coordinates(latitude=1.0, longitude=2.0),
-        )
-        # Then set it to None to simulate the edge case
-        place.administrative_division = None
-
-        timestamp = ForecastTimestamp(
-            datetime="2023-01-01 12:00:00",
-            temperature=15.0,
-            apparent_temperature=14.0,
-            condition_code="clear",
-            wind_speed=5.0,
-            wind_gust_speed=8.0,
-            wind_bearing=180.0,
-            cloud_coverage=10,
-            pressure=1013.25,
-            humidity=65,
-            precipitation=0.0,
-        )
-        forecast = Forecast(
-            place=place,
-            forecast_created="2023-01-01 12:00:00",
-            current_conditions=timestamp,
-            forecast_timestamps=[],
-        )
-        await self.meteo_lt_api._enrich_forecast_with_warnings(forecast)
-
-    async def test_get_hydro_stations(self):
-        """Test getting hydro stations"""
-        with patch.object(self.meteo_lt_api.client, "fetch_hydro_stations") as mock_fetch:
-            mock_stations = []
-            mock_fetch.return_value = mock_stations
-
-            result = await self.meteo_lt_api.fetch_hydro_stations()
-
-            self.assertEqual(result, mock_stations)
-
-    async def test_get_nearest_hydro_station(self):
-        """Test getting nearest hydro station"""
-        with patch.object(self.meteo_lt_api, "fetch_hydro_stations") as mock_get:
-            mock_station = HydroStation(
-                code="test_code",
-                name="Test Station",
-                water_body="Test Water",
-                coordinates=Coordinates(latitude=1.0, longitude=2.0),
-            )
-            mock_get.return_value = [mock_station]
-
-            result = await self.meteo_lt_api.get_nearest_hydro_station(1.0, 2.0)
-
-            self.assertEqual(result, mock_station)
-
-    async def test_get_nearest_hydro_station_no_stations(self):
-        """Test getting nearest hydro station when no stations exist"""
-        with patch.object(self.meteo_lt_api, "fetch_hydro_stations") as mock_get:
-            mock_get.return_value = []
-
-            result = await self.meteo_lt_api.get_nearest_hydro_station(1.0, 2.0)
-
-            self.assertIsNone(result)
-
-    async def test_get_hydro_observation_data(self):
-        """Test getting hydro observation data"""
-        with patch.object(self.meteo_lt_api.client, "fetch_hydro_observation_data") as mock_fetch:
-            mock_station = HydroStation(
-                code="station_1",
-                name="Station 1",
-                water_body="River",
-                coordinates=Coordinates(latitude=54.0, longitude=24.0),
-            )
-            mock_observation = HydroObservation(
-                observation_datetime="2023-01-01 12:00:00",
-                water_level=1.5,
-                water_temperature=5.0,
-                water_discharge=100.0,
-            )
-            mock_obs_data = HydroObservationData(
-                station=mock_station,
-                observations_data_range="2023-01-01 to 2023-01-31",
-                observations=[mock_observation],
-            )
-            mock_fetch.return_value = mock_obs_data
-
-            result = await self.meteo_lt_api.get_hydro_observation_data("station_1")
-
-            self.assertEqual(result, mock_obs_data)
-            mock_fetch.assert_called_once_with("station_1", "measured", "latest")
-
-    async def test_get_hydro_warnings(self):
-        """Test fetching hydrological warnings"""
-        mock_hydro_warnings = [
+@pytest.mark.asyncio
+async def test_get_hydro_warnings():
+    """Test fetching hydrological warnings"""
+    async with MeteoLtAPI() as api_client:
+        mock_warnings = [
             MagicMock(county="Kauno apskritis", warning_type="flood", severity="High"),
-            MagicMock(county="Vilniaus miesto", warning_type="flood", severity="Moderate"),
         ]
 
-        with patch.object(self.meteo_lt_api.hydro_warnings_processor, "get_warnings") as mock_get:
-            mock_get.return_value = mock_hydro_warnings
+        with patch.object(api_client.hydro_warnings_processor, "get_warnings") as mock_get:
+            mock_get.return_value = mock_warnings
 
-            result = await self.meteo_lt_api.get_hydro_warnings("Kauno apskritis")
+            result = await api_client.get_hydro_warnings("Kauno apskritis")
 
-            self.assertEqual(result, mock_hydro_warnings)
+            assert result == mock_warnings
             mock_get.assert_called_once_with("Kauno apskritis")
 
-    async def test_get_all_warnings(self):
-        """Test fetching all warnings (weather and hydro combined)"""
-        weather_warnings = [
-            MagicMock(county="Kauno apskritis", warning_type="wind", severity="Moderate"),
-        ]
-        hydro_warnings = [
-            MagicMock(county="Kauno apskritis", warning_type="flood", severity="High"),
-        ]
+
+@pytest.mark.asyncio
+async def test_get_all_warnings():
+    """Test fetching all warnings (weather and hydro combined)"""
+    async with MeteoLtAPI() as api_client:
+        weather_warnings = [MagicMock(warning_type="wind")]
+        hydro_warnings = [MagicMock(warning_type="flood")]
 
         with (
-            patch.object(self.meteo_lt_api.warnings_processor, "get_warnings") as mock_weather,
-            patch.object(self.meteo_lt_api.hydro_warnings_processor, "get_warnings") as mock_hydro,
+            patch.object(api_client.warnings_processor, "get_warnings") as mock_weather,
+            patch.object(api_client.hydro_warnings_processor, "get_warnings") as mock_hydro,
         ):
             mock_weather.return_value = weather_warnings
             mock_hydro.return_value = hydro_warnings
 
-            result = await self.meteo_lt_api.get_all_warnings()
+            result = await api_client.get_all_warnings()
 
-            self.assertEqual(len(result), 2)
-            self.assertEqual(result[0].warning_type, "wind")
-            self.assertEqual(result[1].warning_type, "flood")
+            assert len(result) == 2
+            assert result[0].warning_type == "wind"
+            assert result[1].warning_type == "flood"
 
-    async def test_enrich_forecast_with_warnings_with_valid_data(self):
-        """Test enriching forecast with warnings when all data is valid"""
+
+# Tests - Enrich Forecast Edge Cases
+@pytest.mark.parametrize(
+    "forecast_data",
+    [
+        None,  # No forecast
+        {"place": None, "admin_div": "Test"},  # No place
+        {"place": "valid", "admin_div": None},  # No admin division
+    ],
+)
+@pytest.mark.asyncio
+async def test_enrich_forecast_with_warnings_edge_cases(mock_timestamp, forecast_data):
+    """Test enriching forecast edge cases"""
+    async with MeteoLtAPI() as api_client:
+        if forecast_data is None:
+            forecast = None
+        elif forecast_data["place"] is None:
+            forecast = Forecast(
+                place=None,
+                forecast_created="2023-01-01 12:00:00",
+                current_conditions=mock_timestamp,
+                forecast_timestamps=[],
+            )
+        else:
+            place = Place(
+                code="test",
+                name="Test",
+                country_code="LT",
+                administrative_division="Test Admin",
+                coordinates=Coordinates(latitude=1.0, longitude=2.0),
+            )
+            place.administrative_division = forecast_data["admin_div"]
+            forecast = Forecast(
+                place=place,
+                forecast_created="2023-01-01 12:00:00",
+                current_conditions=mock_timestamp,
+                forecast_timestamps=[],
+            )
+
+        # Should not raise exception
+        await api_client._enrich_forecast_with_warnings(forecast)
+
+
+@pytest.mark.asyncio
+async def test_enrich_forecast_with_warnings_valid_data(mock_timestamp):
+    """Test enriching forecast with warnings when all data is valid"""
+    async with MeteoLtAPI() as api_client:
         place = Place(
             code="test_code",
             name="Test",
@@ -380,28 +296,12 @@ class TestMeteoLtAPI(unittest.IsolatedAsyncioTestCase):
             coordinates=Coordinates(latitude=1.0, longitude=2.0),
         )
 
-        timestamp = ForecastTimestamp(
-            datetime="2023-01-01 12:00:00",
-            temperature=15.0,
-            apparent_temperature=14.0,
-            condition_code="clear",
-            wind_speed=5.0,
-            wind_gust_speed=8.0,
-            wind_bearing=180.0,
-            cloud_coverage=10,
-            pressure=1013.25,
-            humidity=65,
-            precipitation=0.0,
-        )
-
         forecast = Forecast(
             place=place,
             forecast_created="2023-01-01 12:00:00",
-            current_conditions=timestamp,
-            forecast_timestamps=[timestamp],
+            current_conditions=mock_timestamp,
+            forecast_timestamps=[mock_timestamp],
         )
-
-        from meteo_lt.models import MeteoWarning
 
         mock_warning = MeteoWarning(
             county="Kauno apskritis",
@@ -412,13 +312,85 @@ class TestMeteoLtAPI(unittest.IsolatedAsyncioTestCase):
             end_time="2023-01-01T14:00:00Z",
         )
 
-        with patch.object(self.meteo_lt_api, "get_all_warnings") as mock_get_warnings:
+        with patch.object(api_client, "get_all_warnings") as mock_get_warnings:
             mock_get_warnings.return_value = [mock_warning]
 
-            await self.meteo_lt_api._enrich_forecast_with_warnings(forecast)
+            await api_client._enrich_forecast_with_warnings(forecast)
 
             mock_get_warnings.assert_called_once_with("Kauno rajono savivaldybė")
 
 
-if __name__ == "__main__":
-    unittest.main()
+# Tests - Hydro Functions
+@pytest.mark.asyncio
+async def test_get_hydro_stations():
+    """Test getting hydro stations"""
+    async with MeteoLtAPI() as api_client:
+        with patch.object(api_client.client, "fetch_hydro_stations") as mock_fetch:
+            mock_stations = []
+            mock_fetch.return_value = mock_stations
+
+            result = await api_client.fetch_hydro_stations()
+
+            assert result == mock_stations
+
+
+@pytest.mark.asyncio
+async def test_get_nearest_hydro_station():
+    """Test getting nearest hydro station"""
+    async with MeteoLtAPI() as api_client:
+        mock_station = HydroStation(
+            code="test_code",
+            name="Test Station",
+            water_body="Test Water",
+            coordinates=Coordinates(latitude=1.0, longitude=2.0),
+        )
+
+        with patch.object(api_client, "fetch_hydro_stations") as mock_get:
+            mock_get.return_value = [mock_station]
+
+            result = await api_client.get_nearest_hydro_station(1.0, 2.0)
+
+            assert result == mock_station
+
+
+@pytest.mark.asyncio
+async def test_get_nearest_hydro_station_no_stations():
+    """Test getting nearest hydro station when no stations exist"""
+    async with MeteoLtAPI() as api_client:
+        with patch.object(api_client, "fetch_hydro_stations") as mock_get:
+            mock_get.return_value = []
+
+            result = await api_client.get_nearest_hydro_station(1.0, 2.0)
+
+            assert result is None
+
+
+@pytest.mark.asyncio
+async def test_get_hydro_observation_data():
+    """Test getting hydro observation data"""
+    async with MeteoLtAPI() as api_client:
+        mock_station = HydroStation(
+            code="station_1",
+            name="Station 1",
+            water_body="River",
+            coordinates=Coordinates(latitude=54.0, longitude=24.0),
+        )
+        mock_observation = HydroObservation(
+            observation_datetime="2023-01-01 12:00:00",
+            water_level=1.5,
+            water_temperature=5.0,
+            water_discharge=100.0,
+        )
+        mock_obs_data = HydroObservationData(
+            station=mock_station,
+            observations_data_range="2023-01-01 to 2023-01-31",
+            observations=[mock_observation],
+        )
+
+        with patch.object(api_client.client, "fetch_hydro_observation_data") as mock_fetch:
+            mock_fetch.return_value = mock_obs_data
+
+            result = await api_client.get_hydro_observation_data("station_1")
+
+            assert result == mock_obs_data
+            mock_fetch.assert_called_once_with("station_1", "measured", "latest")

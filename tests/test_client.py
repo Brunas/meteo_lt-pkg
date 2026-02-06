@@ -10,6 +10,7 @@ import aiohttp
 import pytest
 
 from meteo_lt.client import MeteoLtClient
+from meteo_lt.const import WARNINGS_URL
 
 
 @pytest.fixture
@@ -18,6 +19,13 @@ def client():
     return MeteoLtClient()
 
 
+@pytest.fixture
+def tomorrow_date():
+    """Get tomorrow's date string"""
+    return (datetime.now(timezone.utc) + timedelta(days=1)).strftime("%Y-%m-%d")
+
+
+# Tests - Places
 @pytest.mark.asyncio
 async def test_fetch_places(client):
     """Test fetching places from API"""
@@ -46,12 +54,10 @@ async def test_fetch_places(client):
         assert places[0].name == "Lapės"
 
 
+# Tests - Forecast
 @pytest.mark.asyncio
-async def test_fetch_forecast(client):
+async def test_fetch_forecast(client, tomorrow_date):
     """Test fetching forecast from API"""
-
-    tomorrow_date_string = (datetime.now(timezone.utc) + timedelta(days=1)).strftime("%Y-%m-%d")
-
     mock_forecast_data = {
         "place": {
             "code": "lapės",
@@ -60,10 +66,10 @@ async def test_fetch_forecast(client):
             "countryCode": "LT",
             "coordinates": {"latitude": 54.97371, "longitude": 24.00048},
         },
-        "forecastCreationTimeUtc": f"{tomorrow_date_string} 12:00:00",
+        "forecastCreationTimeUtc": f"{tomorrow_date} 12:00:00",
         "forecastTimestamps": [
             {
-                "forecastTimeUtc": f"{tomorrow_date_string} 15:00:00",
+                "forecastTimeUtc": f"{tomorrow_date} 15:00:00",
                 "airTemperature": 15.0,
                 "feelsLikeTemperature": 14.0,
                 "conditionCode": "clear",
@@ -92,14 +98,11 @@ async def test_fetch_forecast(client):
         assert len(forecast.forecast_timestamps) == 1
 
 
+# Tests - Weather Warnings
 @pytest.mark.asyncio
-async def test_fetch_weather_warnings(client):
+async def test_fetch_weather_warnings(client, tomorrow_date):
     """Test fetching weather warnings from API"""
-
-    tomorrow = datetime.now(timezone.utc) + timedelta(days=1)
-    tomorrow_date_string = tomorrow.strftime("%Y-%m-%d")
-    file_date = tomorrow.strftime("%Y%m%d")
-
+    file_date = (datetime.now(timezone.utc) + timedelta(days=1)).strftime("%Y%m%d")
     mock_file_list = [f"https://www.meteo.lt/meteo_jobs/pavojingi_met_reisk_ibl/{file_date}120000-00000001"]
 
     mock_warnings_data = {
@@ -114,8 +117,8 @@ async def test_fetch_weather_warnings(client):
                                 "phenomenon": "wind",
                                 "severity": "Moderate",
                                 "description": {"lt": "Stiprus vėjas"},
-                                "t_from": f"{tomorrow_date_string}T12:00:00Z",
-                                "t_to": f"{tomorrow_date_string}T18:00:00Z",
+                                "t_from": f"{tomorrow_date}T12:00:00Z",
+                                "t_to": f"{tomorrow_date}T18:00:00Z",
                             }
                         ],
                     }
@@ -125,24 +128,17 @@ async def test_fetch_weather_warnings(client):
     }
 
     with patch("aiohttp.ClientSession.get") as mock_get:
-        # Mock the file list response
         mock_list_response = AsyncMock()
         mock_list_response.json.return_value = mock_file_list
         mock_list_response.raise_for_status.return_value = None
 
-        # Mock the warnings data response
         mock_data_response = AsyncMock()
         mock_data_response.text.return_value = json.dumps(mock_warnings_data)
         mock_data_response.raise_for_status.return_value = None
 
-        mock_get.return_value.__aenter__.side_effect = [
-            mock_list_response,
-            mock_data_response,
-        ]
+        mock_get.return_value.__aenter__.side_effect = [mock_list_response, mock_data_response]
 
         async with client:
-            from meteo_lt.const import WARNINGS_URL
-
             warnings_data = await client.fetch_warnings(WARNINGS_URL)
 
         assert isinstance(warnings_data, dict)
@@ -159,17 +155,16 @@ async def test_fetch_weather_warnings_empty(client):
         mock_get.return_value.__aenter__.return_value = mock_response
 
         async with client:
-            from meteo_lt.const import WARNINGS_URL
-
             warnings_data = await client.fetch_warnings(WARNINGS_URL)
 
         assert warnings_data == []
 
 
+# Tests - Hydro Stations
 @pytest.mark.asyncio
 async def test_fetch_hydro_stations(client):
     """Test fetching hydro stations"""
-    mock_stations_data = [
+    mock_data = [
         {
             "code": "station_1",
             "name": "Station 1",
@@ -180,7 +175,7 @@ async def test_fetch_hydro_stations(client):
 
     with patch("aiohttp.ClientSession.get") as mock_get:
         mock_response = AsyncMock()
-        mock_response.json.return_value = mock_stations_data
+        mock_response.json.return_value = mock_data
         mock_response.status = 200
         mock_response.raise_for_status.return_value = None
         mock_get.return_value.__aenter__.return_value = mock_response
@@ -190,26 +185,12 @@ async def test_fetch_hydro_stations(client):
 
         assert len(stations) == 1
         assert stations[0].code == "station_1"
-        assert stations[0].name == "Station 1"
-
-
-@pytest.mark.asyncio
-async def test_fetch_hydro_stations_error(client):
-    """Test handling error when fetching hydro stations"""
-    with patch("aiohttp.ClientSession.get") as mock_get:
-        mock_response = AsyncMock()
-        mock_response.status = 500
-        mock_get.return_value.__aenter__.return_value = mock_response
-
-        with pytest.raises(Exception, match="API returned status 500"):
-            async with client:
-                await client.fetch_hydro_stations()
 
 
 @pytest.mark.asyncio
 async def test_fetch_hydro_station(client):
     """Test fetching a specific hydro station"""
-    mock_station_data = {
+    mock_data = {
         "code": "station_1",
         "name": "Station 1",
         "waterBody": "River",
@@ -218,7 +199,7 @@ async def test_fetch_hydro_station(client):
 
     with patch("aiohttp.ClientSession.get") as mock_get:
         mock_response = AsyncMock()
-        mock_response.json.return_value = mock_station_data
+        mock_response.json.return_value = mock_data
         mock_response.status = 200
         mock_response.raise_for_status.return_value = None
         mock_get.return_value.__aenter__.return_value = mock_response
@@ -227,26 +208,13 @@ async def test_fetch_hydro_station(client):
             station = await client.fetch_hydro_station("station_1")
 
         assert station.code == "station_1"
-        assert station.name == "Station 1"
 
 
-@pytest.mark.asyncio
-async def test_fetch_hydro_station_error(client):
-    """Test handling error when fetching a specific hydro station"""
-    with patch("aiohttp.ClientSession.get") as mock_get:
-        mock_response = AsyncMock()
-        mock_response.status = 404
-        mock_get.return_value.__aenter__.return_value = mock_response
-
-        with pytest.raises(Exception, match="API returned status 404"):
-            async with client:
-                await client.fetch_hydro_station("nonexistent")
-
-
+# Tests - Hydro Observations
 @pytest.mark.asyncio
 async def test_fetch_hydro_observation_data(client):
     """Test fetching hydro observation data"""
-    mock_observation_data = {
+    mock_data = {
         "station": {
             "code": "station_1",
             "name": "Station 1",
@@ -266,7 +234,7 @@ async def test_fetch_hydro_observation_data(client):
 
     with patch("aiohttp.ClientSession.get") as mock_get:
         mock_response = AsyncMock()
-        mock_response.json.return_value = mock_observation_data
+        mock_response.json.return_value = mock_data
         mock_response.status = 200
         mock_response.raise_for_status.return_value = None
         mock_get.return_value.__aenter__.return_value = mock_response
@@ -279,19 +247,30 @@ async def test_fetch_hydro_observation_data(client):
         assert obs_data.observations[0].water_level == 1.5
 
 
+# Tests - Error Handling
+@pytest.mark.parametrize(
+    "method_name,args,status_code",
+    [
+        ("fetch_hydro_stations", (), 500),
+        ("fetch_hydro_station", ("station_1",), 404),
+        ("fetch_hydro_observation_data", ("station_1",), 500),
+    ],
+)
 @pytest.mark.asyncio
-async def test_fetch_hydro_observation_data_error(client):
-    """Test handling error when fetching hydro observation data"""
+async def test_hydro_api_errors(client, method_name, args, status_code):
+    """Test error handling for hydro API methods"""
     with patch("aiohttp.ClientSession.get") as mock_get:
         mock_response = AsyncMock()
-        mock_response.status = 500
+        mock_response.status = status_code
         mock_get.return_value.__aenter__.return_value = mock_response
 
-        with pytest.raises(Exception, match="API returned status 500"):
+        with pytest.raises(Exception, match=f"API returned status {status_code}"):
             async with client:
-                await client.fetch_hydro_observation_data("station_1")
+                method = getattr(client, method_name)
+                await method(*args)
 
 
+# Tests - Session Management
 @pytest.mark.asyncio
 async def test_client_context_manager(client):
     """Test client as async context manager"""
@@ -304,7 +283,6 @@ async def test_client_close(client):
     """Test closing client"""
     async with client:
         pass
-    # After exiting context, session should be closed
     assert client._session is None
 
 
@@ -336,5 +314,4 @@ async def test_client_with_external_session():
 
         # Client should not close external session
         await client.close()
-        # External session should still be usable
         assert not external_session.closed

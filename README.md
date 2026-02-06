@@ -185,6 +185,8 @@ async def fetch_warnings():
             print(f"Warning: {warning.warning_type} in {warning.county}")
             print(f"Severity: {warning.severity}")
             print(f"Description: {warning.description}")
+            if warning.instruction:
+                print(f"Instruction: {warning.instruction}")
             print(f"Active: {warning.start_time} to {warning.end_time}")
             print("-" * 50)
 
@@ -216,6 +218,8 @@ async def fetch_hydro_warnings():
             print(f"Hydro Warning: {warning.warning_type} in {warning.county}")
             print(f"Severity: {warning.severity}")
             print(f"Description: {warning.description}")
+            if warning.instruction:
+                print(f"Instruction: {warning.instruction}")
             print("-" * 50)
 
 async def fetch_hydro_warnings_for_area():
@@ -243,6 +247,8 @@ async def fetch_all_warnings():
             print(f"{warning.warning_type} in {warning.county}")
             print(f"Severity: {warning.severity}")
             print(f"Description: {warning.description}")
+            if warning.instruction:
+                print(f"Instruction: {warning.instruction}")
             print("-" * 50)
 
 async def fetch_all_warnings_for_area():
@@ -352,11 +358,14 @@ weather_warning = MeteoWarning(
     warning_type="frost",
     severity="Moderate",
     description="Ground surface frost 0-5 degrees in many places",
+    instruction="Protect sensitive plants and be cautious on roads",  # Optional safety instruction
     category="weather",
     start_time="2024-07-23T12:00:00Z",
     end_time="2024-07-23T18:00:00Z"
 )
 print(f"Warning for {weather_warning.county}: {weather_warning.description}")
+if weather_warning.instruction:
+    print(f"Safety instruction: {weather_warning.instruction}")
 print(f"Category: {weather_warning.category}")  # "weather" or "hydro"
 
 # Hydrological warning example
@@ -365,6 +374,7 @@ hydro_warning = MeteoWarning(
     warning_type="flood",
     severity="High",
     description="High water levels expected",
+    instruction="Avoid low-lying areas and do not attempt to cross flooded roads",  # Optional
     category="hydro",
     start_time="2024-07-23T12:00:00Z",
     end_time="2024-07-24T12:00:00Z"

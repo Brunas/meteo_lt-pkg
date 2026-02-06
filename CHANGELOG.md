@@ -1,3 +1,12 @@
+## Release 0.5.3
+
+Date: `2026-02-06`
+
+### Changes
+
+- Separate `MeteoWarning.instruction` which earlier was appended to the  `MeteoWarning.description`
+- Unit test optimization
+
 ## Release 0.5.2
 
 Date: `2026-02-05`
