@@ -367,19 +367,41 @@ def test_warning_affects_area_with_sav_abbreviation(client):
 @pytest.mark.parametrize(
     "timestamp,expected_count",
     [
-        ("2025-09-30T15:00:00+00:00", 1),  # Within period
-        ("2025-09-30T12:00:00+00:00", 1),  # Exact start
-        ("2025-09-30T18:00:00+00:00", 1),  # Exact end
+        ("2025-09-30T15:00:00+00:00", 1),  # Within period (15:00-16:00 hour overlaps with 12:00-18:00 warning)
+        ("2025-09-30T12:00:00+00:00", 1),  # Hour starting at warning start (12:00-13:00 overlaps)
+        ("2025-09-30T17:00:00+00:00", 1),  # Hour ending at warning end (17:00-18:00 overlaps)
+        ("2025-09-30T18:00:00+00:00", 0),  # Hour after warning ends (18:00-19:00, warning ends at 18:00)
         ("2025-09-30T20:00:00+00:00", 0),  # After period
         ("2025-09-30T10:00:00+00:00", 0),  # Before period
+        ("2025-09-30T11:00:00+00:00", 0),  # Hour before warning starts (11:00-12:00, warning starts at 12:00)
     ],
 )
 def test_get_warnings_for_timestamp(warnings_processor, timestamp, expected_count):
-    """Test getting warnings for specific timestamp"""
+    """Test getting warnings for specific timestamp (timestamp represents start of 1-hour period)"""
     warnings = [create_warning(start_time="2025-09-30T12:00:00Z", end_time="2025-09-30T18:00:00Z")]
 
     applicable = warnings_processor._get_warnings_for_timestamp(timestamp, warnings)
     assert len(applicable) == expected_count
+
+
+def test_get_warnings_for_timestamp_with_timezone_offset(warnings_processor):
+    """Test warning time matching with timezone offset timestamps
+
+    Warning: 2026-02-05 23:30 UTC to 2026-02-06 11:00 UTC
+    Timestamps represent hourly periods, so warning should match any hour it overlaps with.
+    """
+    warnings = [create_warning(start_time="2026-02-05T23:30:00Z", end_time="2026-02-06T11:00:00Z")]
+
+    # 2026-02-06 02:30+02:00 = 2026-02-06 00:30 UTC (hour 00:00-01:00) → overlaps
+    inside = warnings_processor._get_warnings_for_timestamp("2026-02-06T02:30:00+02:00", warnings)
+    # 2026-02-06 01:00+02:00 = 2026-02-05 23:00 UTC (hour 23:00-00:00) → overlaps (warning starts at 23:30)
+    also_inside = warnings_processor._get_warnings_for_timestamp("2026-02-06T01:00:00+02:00", warnings)
+    # 2026-02-05 22:00+02:00 = 2026-02-05 20:00 UTC (hour 20:00-21:00) → no overlap
+    outside = warnings_processor._get_warnings_for_timestamp("2026-02-05T22:00:00+02:00", warnings)
+
+    assert len(inside) == 1
+    assert len(also_inside) == 1
+    assert len(outside) == 0
 
 
 @pytest.mark.parametrize("timestamp", ["invalid-date", ""])

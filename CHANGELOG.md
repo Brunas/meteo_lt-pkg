@@ -1,3 +1,18 @@
+## Release 0.6.0
+
+Date: `2026-02-06`
+
+### Breaking Changes
+
+- **Minimum Python version bumped from 3.10 to 3.11**
+
+### Bug Fixes
+
+- **Fixed warning enrichment**: Forecast timestamps now properly treated as hourly periods instead of exact points in time
+  - A warning active from 23:30 to 11:00 will now correctly apply to all overlapping hourly forecasts
+  - Fixed edge cases where warnings starting or ending mid-hour were not matched
+- Warnings are **included by default** again in `get_forecast()` calls (was `include_warnings=False`, now `include_warnings=True`)
+
 ## Release 0.5.3
 
 Date: `2026-02-06`

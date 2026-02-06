@@ -5,43 +5,42 @@ name: Python application
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python: ["3.10", "3.11", "3.12"] 
+        python: ["3.11", "3.12", "3.13"]
     steps:
-    - name: Checkout the repository
-      uses: actions/checkout@v6.0.2
+      - name: Checkout the repository
+        uses: actions/checkout@v6.0.2
 
-    - name: Set up Python
-      uses: actions/setup-python@v6.2.0
-      with:
-        python-version: ${{ matrix.python }}
-        cache: "pip"
+      - name: Set up Python
+        uses: actions/setup-python@v6.2.0
+        with:
+          python-version: ${{ matrix.python }}
+          cache: "pip"
 
-    - name: Install dependencies
-      run: |
-        pip install --upgrade pip build
-        pip install -r requirements.txt
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip build
+          pip install -r requirements.txt
 
-    - name: Install the package
-      run: |
-        pip install .
+      - name: Install the package
+        run: |
+          pip install .
 
-    - name: Lint with flake8
-      run: |
-        # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-        
-    - name: Test with pytest
-      run: |
-        pytest --cov=meteo_lt tests
-        
+      - name: Lint with flake8
+        run: |
+          # stop the build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: Test with pytest
+        run: |
+          pytest --cov=meteo_lt tests

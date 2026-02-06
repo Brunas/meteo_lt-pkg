@@ -1,7 +1,7 @@
 """Unified warnings processor for handling weather and hydrological warning-related logic"""
 
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Literal, Optional
 
 from .client import MeteoLtClient
@@ -109,10 +109,7 @@ class WarningsProcessor:
         return False
 
     def enrich_forecast_with_warnings(self, forecast: Forecast, warnings: List[MeteoWarning]) -> None:
-        """Enrich forecast timestamps with relevant warnings
-
-        All warnings (weather and hydro) are added to 'warnings' attribute
-        """
+        """Enrich forecast timestamps with relevant warnings"""
         if not warnings:
             return
 
@@ -135,27 +132,26 @@ class WarningsProcessor:
     def _get_warnings_for_timestamp(self, timestamp_str: str, warnings: List[MeteoWarning]) -> List[MeteoWarning]:
         """Get warnings that are active for a specific timestamp"""
         try:
-            timestamp = datetime.fromisoformat(timestamp_str).replace(tzinfo=timezone.utc)
-            applicable_warnings = []
-
-            for warning in warnings:
-                if not warning.start_time or not warning.end_time:
-                    continue
-
-                try:
-                    start_time = datetime.fromisoformat(warning.start_time.replace("Z", "+00:00"))
-                    end_time = datetime.fromisoformat(warning.end_time.replace("Z", "+00:00"))
-
-                    # Check if timestamp falls within warning period
-                    if start_time <= timestamp <= end_time:
-                        applicable_warnings.append(warning)
-
-                except (ValueError, AttributeError):
-                    # Skip warnings with invalid time formats
-                    continue
-
-            return applicable_warnings
-
+            timestamp = datetime.fromisoformat(timestamp_str).astimezone(timezone.utc)
         except (ValueError, AttributeError):
-            # Return empty list if timestamp parsing fails
             return []
+
+        # Forecast timestamp represents an hour starting at this time
+        hour_start = timestamp
+        hour_end = timestamp + timedelta(hours=1)
+
+        applicable_warnings = []
+
+        for warning in warnings:
+            try:
+                start_time = datetime.fromisoformat(warning.start_time).astimezone(timezone.utc)
+                end_time = datetime.fromisoformat(warning.end_time).astimezone(timezone.utc)
+            except (ValueError, AttributeError, TypeError):
+                continue
+
+            # Check if warning period overlaps with the hour
+            # Warning overlaps if it starts before hour ends AND ends after hour starts
+            if start_time < hour_end and end_time > hour_start:
+                applicable_warnings.append(warning)
+
+        return applicable_warnings

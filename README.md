@@ -10,6 +10,11 @@
 
 MeteoLt-Pkg is a Python library designed to fetch weather data from [`api.meteo.lt`](https://api.meteo.lt/). This library provides convenient methods to interact with the API and obtain weather forecasts and related data. Please visit for more information.
 
+## Requirements
+
+- Python 3.11 or higher
+- aiohttp 3.13 or higher
+
 ## Installation
 
 You can install the package using pip:
@@ -126,7 +131,7 @@ To get the weather forecast for a specific place:
 ```python
 async def fetch_forecast():
     async with MeteoLtAPI() as api:
-        # Get forecast for Vilnius
+        # Get forecast for Vilnius (warnings included by default)
         forecast = await api.get_forecast("vilnius")
 
         # Current conditions
@@ -135,6 +140,12 @@ async def fetch_forecast():
         print(f"Feels like: {current.apparent_temperature}°C")
         print(f"Condition: {current.condition_code}")
 
+        # Check for warnings (automatically included)
+        if current.warnings:
+            print(f"\nActive warnings: {len(current.warnings)}")
+            for warning in current.warnings:
+                print(f"- {warning.warning_type}: {warning.severity}")
+
         # Future forecasts
         print(f"\nNext 24 hours:")
         for timestamp in forecast.forecast_timestamps[:24]:
@@ -142,6 +153,8 @@ async def fetch_forecast():
 
 asyncio.run(fetch_forecast())
 ```
+
+> **NOTE**: Weather and hydrological warnings are automatically included in forecast data by default. To exclude warnings, use `get_forecast(place_code, include_warnings=False)`.
 
 > **NOTE**: `current_conditions` is the current hour record from the `forecast_timestamps` array. Also, `forecast_timestamps` array has past time records filtered out due to `api.meteo.lt` not doing that automatically.
 

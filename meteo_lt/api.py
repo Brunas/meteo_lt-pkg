@@ -67,7 +67,7 @@ class MeteoLtAPI:
 
         return await self.get_forecast(place_code, include_warnings=True)
 
-    async def get_forecast(self, place_code: str, include_warnings: bool = False) -> Forecast:
+    async def get_forecast(self, place_code: str, include_warnings: bool = True) -> Forecast:
         """Retrieves forecast data from API"""
         forecast = await self.client.fetch_forecast(place_code)
 
