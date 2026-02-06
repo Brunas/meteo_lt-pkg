@@ -2,11 +2,11 @@
 
 import re
 from datetime import datetime, timezone
-from typing import List, Optional, Dict, Any, Literal
+from typing import Any, Dict, List, Literal, Optional
 
-from .models import Forecast, MeteoWarning
-from .const import COUNTY_MUNICIPALITIES, WARNINGS_URL, HYDRO_WARNINGS_URL
 from .client import MeteoLtClient
+from .const import COUNTY_MUNICIPALITIES, HYDRO_WARNINGS_URL, WARNINGS_URL
+from .models import Forecast, MeteoWarning
 
 WarningCategory = Literal["weather", "hydro"]
 
@@ -77,20 +77,17 @@ class WarningsProcessor:
         inst_dict = alert.get("instruction", {})
 
         description = desc_dict.get("en") or desc_dict.get("lt", "")
-        instruction = inst_dict.get("en") or inst_dict.get("lt", "")
-
-        full_description = description
-        if instruction:
-            full_description += f"\n\nRecommendations: {instruction}"
+        instruction = inst_dict.get("en") or inst_dict.get("lt", "") or None
 
         return MeteoWarning(
             county=county,
             warning_type=warning_type,
             severity=severity,
-            description=full_description,
+            description=description,
             category=self.category,
             start_time=alert.get("t_from"),
             end_time=alert.get("t_to"),
+            instruction=instruction,
         )
 
     def _warning_affects_area(self, warning: MeteoWarning, administrative_division: str) -> bool:

@@ -1,33 +1,40 @@
 """Models unit tests"""
 
 from datetime import datetime, timedelta
-import unittest
+
+import pytest
+
 from meteo_lt.models import (
     Coordinates,
     Forecast,
     ForecastTimestamp,
-    Place,
-    HydroStation,
     HydroObservation,
     HydroObservationData,
+    HydroStation,
+    MeteoWarning,
+    Place,
 )
 
 
-class TestMeteoLtModels(unittest.TestCase):
-    """Models test class"""
+# Fixtures
+@pytest.fixture
+def sample_place():
+    """Create a sample place for testing."""
+    return Place(
+        code="123",
+        name="Sample Place",
+        country_code="XX",
+        administrative_division="Sample Admin Div",
+        coordinates=Coordinates(latitude=54.6872, longitude=25.2797),
+    )
 
-    def setUp(self):
-        """Set up the test fixtures."""
-        self.place = Place(
-            code="123",
-            name="Sample Place",
-            country_code="XX",
-            administrative_division="Sample Admin Div",
-            coordinates=Coordinates(latitude=54.6872, longitude=25.2797),
-        )
-        now = datetime.now()
-        # Create forecast timestamps for testing
-        self.past_timestamp = ForecastTimestamp(
+
+@pytest.fixture
+def sample_timestamps():
+    """Create sample forecast timestamps."""
+    now = datetime.now()
+    return {
+        "past": ForecastTimestamp(
             datetime=(now - timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S"),
             temperature=20,
             apparent_temperature=21,
@@ -39,8 +46,8 @@ class TestMeteoLtModels(unittest.TestCase):
             pressure=1010,
             humidity=50,
             precipitation=0,
-        )
-        self.future_timestamp_1 = ForecastTimestamp(
+        ),
+        "future_1": ForecastTimestamp(
             datetime=(now + timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S"),
             temperature=27,
             apparent_temperature=27.9,
@@ -52,8 +59,8 @@ class TestMeteoLtModels(unittest.TestCase):
             pressure=1016,
             humidity=58,
             precipitation=0,
-        )
-        self.future_timestamp_2 = ForecastTimestamp(
+        ),
+        "future_2": ForecastTimestamp(
             datetime=(now + timedelta(hours=2)).strftime("%Y-%m-%d %H:%M:%S"),
             temperature=29,
             apparent_temperature=30.9,
@@ -65,303 +72,363 @@ class TestMeteoLtModels(unittest.TestCase):
             pressure=1016,
             humidity=58,
             precipitation=0,
-        )
+        ),
+    }
 
-    def test_current_conditions_with_timestamps(self):
-        """Test current_conditions method with forecast timestamps."""
-        forecast = Forecast(
-            place=self.place,
-            forecast_created=(datetime.now() - timedelta(hours=2)).strftime("%Y-%m-%d %H:%M:%S"),
-            current_conditions=self.future_timestamp_1,
-            forecast_timestamps=[self.future_timestamp_2],
-        )
-        current_conditions = forecast.current_conditions
 
-        self.assertIsNotNone(current_conditions)
-        self.assertEqual(current_conditions.temperature, 27.0)
-        self.assertEqual(current_conditions.condition_code, "partly-cloudy")
+# Tests - Coordinates
+def test_coordinates_from_dict():
+    """Test coordinates from_dict."""
+    data = {"latitude": 54.6872, "longitude": 25.2797}
+    coords = Coordinates.from_dict(data)
 
-    def test_current_conditions_no_timestamps(self):
-        """Test current_conditions method with no forecast timestamps."""
-        forecast = Forecast(
-            place=self.place,
-            forecast_created=(datetime.now() - timedelta(hours=2)).strftime("%Y-%m-%d %H:%M:%S"),
-            current_conditions=None,
-            forecast_timestamps=[],
-        )
-        current_conditions = forecast.current_conditions
+    assert isinstance(coords, Coordinates)
+    assert coords.latitude == 54.6872
+    assert coords.longitude == 25.2797
 
-        self.assertIsNone(current_conditions)
 
-    def test_coordinates_from_dict(self):
-        """Tests coordinates from_dict"""
-        data = {"latitude": 54.6872, "longitude": 25.2797}
+# Tests - Place
+@pytest.mark.parametrize(
+    "division,expected_counties",
+    [
+        ("Alytaus miesto", ["Alytaus apskritis"]),
+        ("Birštono", ["Kauno apskritis"]),
+        ("Klaipėdos rajono", ["Klaipėdos apskritis", "Pietryčių Baltija, Kuršių marios"]),
+        ("Kalvarijos", ["Marijampolės apskritis"]),
+        ("Panevėžio miesto", ["Panevėžio apskritis"]),
+        ("Joniškio rajono", ["Šiaulių apskritis"]),
+        ("Jurbarko rajono", ["Tauragės apskritis"]),
+        ("Mažeikių rajono", ["Telšių apskritis"]),
+        ("Anykščių rajono", ["Utenos apskritis"]),
+        ("Elektrėnų", ["Vilniaus apskritis"]),
+    ],
+)
+def test_place_valid_division(division, expected_counties):
+    """Test that valid divisions return the correct counties."""
+    place = Place(
+        code="123",
+        name="Sample Place",
+        country_code="XX",
+        administrative_division=f"{division} savivaldybė",
+        coordinates=Coordinates(latitude=1.0, longitude=1.0),
+    )
+    assert place.counties == expected_counties
 
-        coords = Coordinates.from_dict(data)
 
-        self.assertIsInstance(coords, Coordinates)
-        self.assertEqual(coords.latitude, 54.6872)
-        self.assertEqual(coords.longitude, 25.2797)
+@pytest.mark.parametrize(
+    "division",
+    [
+        "Nonexistent Division",
+        "Fake County",
+        "Imaginary Area",
+    ],
+)
+def test_place_invalid_division(division):
+    """Test that invalid divisions return empty counties list."""
+    place = Place(
+        code="123",
+        name="Sample Place",
+        country_code="XX",
+        administrative_division=f"{division} savivaldybė",
+        coordinates=Coordinates(latitude=1.0, longitude=1.0),
+    )
+    assert place.counties == []
 
-    def test_datetime_format(self):
-        """Checking ISO 8601 date format"""
-        # Create an instance of ForecastTimestamp
-        sample_data = {
-            "forecastTimeUtc": (datetime.now() + timedelta(hours=2)).strftime("%Y-%m-%d %H:%M:%S"),
-            "airTemperature": 20.5,
-            "feelsLikeTemperature": 21.0,
-            "conditionCode": "clear",
-            "windSpeed": 5.5,
-            "windGust": 7.0,
-            "windDirection": 180,
-            "cloudCover": 25.0,
-            "seaLevelPressure": 1013.25,
-            "relativeHumidity": 60.0,
-            "totalPrecipitation": 0.0,
-        }
-        forecast_timestamp = ForecastTimestamp.from_dict(sample_data)
 
-        # Assert that the datetime is in ISO 8601 format
-        self.assertEqual(
-            forecast_timestamp.datetime,
-            sample_data["forecastTimeUtc"].replace(" ", "T") + "+00:00",
-        )
+# Tests - Forecast
+def test_current_conditions_with_timestamps(sample_place, sample_timestamps):
+    """Test current_conditions with forecast timestamps."""
+    forecast = Forecast(
+        place=sample_place,
+        forecast_created=(datetime.now() - timedelta(hours=2)).strftime("%Y-%m-%d %H:%M:%S"),
+        current_conditions=sample_timestamps["future_1"],
+        forecast_timestamps=[sample_timestamps["future_2"]],
+    )
 
-    def test_filter_past_timestamps(self):
-        """Test that past timestamps are filtered out."""
-        forecast = Forecast(
-            place=self.place,
-            current_conditions=None,
-            forecast_created=(datetime.now() - timedelta(hours=2)).strftime("%Y-%m-%d %H:%M:%S"),
-            forecast_timestamps=[
-                self.past_timestamp,
-                self.future_timestamp_1,
-                self.future_timestamp_2,
-            ],
-        )
+    assert forecast.current_conditions is not None
+    assert forecast.current_conditions.temperature == 27.0
+    assert forecast.current_conditions.condition_code == "partly-cloudy"
 
-        # Check that only future timestamps remain
-        self.assertIn(self.future_timestamp_1, forecast.forecast_timestamps)
-        self.assertIn(self.future_timestamp_2, forecast.forecast_timestamps)
-        self.assertNotIn(self.past_timestamp, forecast.forecast_timestamps)
 
-    def test_place_valid_division(self):
-        """Test that valid divisions return the correct counties."""
-        test_cases = {
-            "Alytaus miesto": ["Alytaus apskritis"],
-            "Birštono": ["Kauno apskritis"],
-            "Klaipėdos rajono": [
-                "Klaipėdos apskritis",
-                "Pietryčių Baltija, Kuršių marios",
-            ],
-            "Kalvarijos": ["Marijampolės apskritis"],
-            "Panevėžio miesto": ["Panevėžio apskritis"],
-            "Joniškio rajono": ["Šiaulių apskritis"],
-            "Jurbarko rajono": ["Tauragės apskritis"],
-            "Mažeikių rajono": ["Telšių apskritis"],
-            "Anykščių rajono": ["Utenos apskritis"],
-            "Elektrėnų": ["Vilniaus apskritis"],
-        }
+def test_current_conditions_no_timestamps(sample_place):
+    """Test current_conditions with no forecast timestamps."""
+    forecast = Forecast(
+        place=sample_place,
+        forecast_created=(datetime.now() - timedelta(hours=2)).strftime("%Y-%m-%d %H:%M:%S"),
+        current_conditions=None,
+        forecast_timestamps=[],
+    )
 
-        for division, expected_counties in test_cases.items():
-            with self.subTest(division=division):
-                place = Place(
-                    code="123",
-                    name="Sample Place",
-                    country_code="XX",
-                    administrative_division=f"{division} savivaldybė",
-                    coordinates=Coordinates(latitude=1.0, longitude=1.0),
-                )
-                self.assertEqual(place.counties, expected_counties)
+    assert forecast.current_conditions is None
 
-    def test_place_invalid_division(self):
-        """Test that invalid divisions return 'Unknown county'."""
-        invalid_divisions = ["Nonexistent Division", "Fake County", "Imaginary Area"]
 
-        for division in invalid_divisions:
-            with self.subTest(division=division):
-                place = Place(
-                    code="123",
-                    name="Sample Place",
-                    country_code="XX",
-                    administrative_division=f"{division} savivaldybė",
-                    coordinates=Coordinates(latitude=1.0, longitude=1.0),
-                )
-                self.assertFalse(place.counties)
+def test_filter_past_timestamps(sample_place, sample_timestamps):
+    """Test that past timestamps are filtered out."""
+    forecast = Forecast(
+        place=sample_place,
+        current_conditions=None,
+        forecast_created=(datetime.now() - timedelta(hours=2)).strftime("%Y-%m-%d %H:%M:%S"),
+        forecast_timestamps=[
+            sample_timestamps["past"],
+            sample_timestamps["future_1"],
+            sample_timestamps["future_2"],
+        ],
+    )
 
-    def test_hydro_station_creation(self):
-        """Test HydroStation creation and properties."""
-        station = HydroStation(
-            code="station_001",
-            name="River Station",
-            water_body="Nemunas River",
-            coordinates=Coordinates(latitude=54.5, longitude=24.5),
-        )
+    assert sample_timestamps["future_1"] in forecast.forecast_timestamps
+    assert sample_timestamps["future_2"] in forecast.forecast_timestamps
+    assert sample_timestamps["past"] not in forecast.forecast_timestamps
 
-        self.assertEqual(station.code, "station_001")
-        self.assertEqual(station.name, "River Station")
-        self.assertEqual(station.water_body, "Nemunas River")
-        self.assertEqual(station.latitude, 54.5)
-        self.assertEqual(station.longitude, 24.5)
 
-    def test_hydro_station_from_dict(self):
-        """Test HydroStation from_dict conversion."""
-        data = {
-            "code": "station_002",
-            "name": "Lake Station",
-            "waterBody": "Galvė Lake",
-            "coordinates": {"latitude": 54.2, "longitude": 25.8},
-        }
+# Tests - ForecastTimestamp
+def test_datetime_format():
+    """Test ISO 8601 date format conversion."""
+    sample_data = {
+        "forecastTimeUtc": (datetime.now() + timedelta(hours=2)).strftime("%Y-%m-%d %H:%M:%S"),
+        "airTemperature": 20.5,
+        "feelsLikeTemperature": 21.0,
+        "conditionCode": "clear",
+        "windSpeed": 5.5,
+        "windGust": 7.0,
+        "windDirection": 180,
+        "cloudCover": 25.0,
+        "seaLevelPressure": 1013.25,
+        "relativeHumidity": 60.0,
+        "totalPrecipitation": 0.0,
+    }
+    forecast_timestamp = ForecastTimestamp.from_dict(sample_data)
 
-        station = HydroStation.from_dict(data)
+    assert forecast_timestamp.datetime == sample_data["forecastTimeUtc"].replace(" ", "T") + "+00:00"
 
-        self.assertIsInstance(station, HydroStation)
-        self.assertEqual(station.code, "station_002")
-        self.assertEqual(station.name, "Lake Station")
-        # Note: water_body requires manual mapping since it doesn't have json_key metadata
-        self.assertEqual(station.latitude, 54.2)
-        self.assertEqual(station.longitude, 25.8)
 
-    def test_hydro_observation_creation(self):
-        """Test HydroObservation creation with all fields."""
+# Tests - HydroStation
+def test_hydro_station_creation():
+    """Test HydroStation creation and properties."""
+    station = HydroStation(
+        code="station_001",
+        name="River Station",
+        water_body="Nemunas River",
+        coordinates=Coordinates(latitude=54.5, longitude=24.5),
+    )
+
+    assert station.code == "station_001"
+    assert station.name == "River Station"
+    assert station.water_body == "Nemunas River"
+    assert station.latitude == 54.5
+    assert station.longitude == 24.5
+
+
+def test_hydro_station_from_dict():
+    """Test HydroStation from_dict conversion."""
+    data = {
+        "code": "station_002",
+        "name": "Lake Station",
+        "waterBody": "Galvė Lake",
+        "coordinates": {"latitude": 54.2, "longitude": 25.8},
+    }
+    station = HydroStation.from_dict(data)
+
+    assert isinstance(station, HydroStation)
+    assert station.code == "station_002"
+    assert station.name == "Lake Station"
+    assert station.latitude == 54.2
+    assert station.longitude == 25.8
+
+
+def test_hydro_station_coordinates_properties():
+    """Test that HydroStation inherits location base properties."""
+    station = HydroStation(
+        code="station_006",
+        name="Property Test Station",
+        water_body="Property Test River",
+        coordinates=Coordinates(latitude=55.1, longitude=23.9),
+    )
+
+    assert station.latitude == 55.1
+    assert station.longitude == 23.9
+
+
+# Tests - HydroObservation
+@pytest.mark.parametrize("all_fields", [True, False])
+def test_hydro_observation_creation(all_fields):
+    """Test HydroObservation creation with all or partial fields."""
+    if all_fields:
         observation = HydroObservation(
             observation_datetime="2023-01-01 12:00:00",
             water_level=125.5,
             water_temperature=8.3,
             water_discharge=50.2,
         )
-
-        self.assertEqual(observation.observation_datetime, "2023-01-01 12:00:00")
-        self.assertEqual(observation.water_level, 125.5)
-        self.assertEqual(observation.water_temperature, 8.3)
-        self.assertEqual(observation.water_discharge, 50.2)
-
-    def test_hydro_observation_partial_fields(self):
-        """Test HydroObservation creation with partial fields."""
+        assert observation.observation_datetime == "2023-01-01 12:00:00"
+        assert observation.water_level == 125.5
+        assert observation.water_temperature == 8.3
+        assert observation.water_discharge == 50.2
+    else:
         observation = HydroObservation(
             observation_datetime="2023-01-01 12:00:00",
             water_level=125.5,
         )
+        assert observation.observation_datetime == "2023-01-01 12:00:00"
+        assert observation.water_level == 125.5
+        assert observation.water_temperature is None
+        assert observation.water_discharge is None
 
-        self.assertEqual(observation.observation_datetime, "2023-01-01 12:00:00")
-        self.assertEqual(observation.water_level, 125.5)
-        self.assertIsNone(observation.water_temperature)
-        self.assertIsNone(observation.water_discharge)
 
-    def test_hydro_observation_from_dict(self):
-        """Test HydroObservation from_dict conversion."""
-        data = {
-            "observationTimeUtc": "2023-01-01 14:00:00",
-            "waterLevel": 130.2,
-            "waterTemperature": 7.5,
-            "waterDischarge": 55.8,
-        }
+def test_hydro_observation_from_dict():
+    """Test HydroObservation from_dict conversion."""
+    data = {
+        "observationTimeUtc": "2023-01-01 14:00:00",
+        "waterLevel": 130.2,
+        "waterTemperature": 7.5,
+        "waterDischarge": 55.8,
+    }
+    observation = HydroObservation.from_dict(data)
 
-        observation = HydroObservation.from_dict(data)
+    assert isinstance(observation, HydroObservation)
+    assert observation is not None
 
-        self.assertIsInstance(observation, HydroObservation)
-        # The observation_datetime field uses camelCase in JSON (observationTimeUtc)
-        # but doesn't have json_key metadata, so it won't map unless handled specially
-        # Check that the object was created successfully
-        self.assertIsNotNone(observation)
 
-    def test_hydro_observation_data_creation(self):
-        """Test HydroObservationData creation."""
-        station = HydroStation(
-            code="station_003",
-            name="Test Station",
-            water_body="Test River",
-            coordinates=Coordinates(latitude=54.0, longitude=24.0),
-        )
-        observations = [
-            HydroObservation(
-                observation_datetime="2023-01-01 12:00:00",
-                water_level=120.0,
-                water_temperature=5.0,
-                water_discharge=40.0,
-            ),
-            HydroObservation(
-                observation_datetime="2023-01-01 13:00:00",
-                water_level=121.5,
-                water_temperature=5.2,
-                water_discharge=41.0,
-            ),
-        ]
+# Tests - HydroObservationData
+def test_hydro_observation_data_creation():
+    """Test HydroObservationData creation."""
+    station = HydroStation(
+        code="station_003",
+        name="Test Station",
+        water_body="Test River",
+        coordinates=Coordinates(latitude=54.0, longitude=24.0),
+    )
+    observations = [
+        HydroObservation(
+            observation_datetime="2023-01-01 12:00:00",
+            water_level=120.0,
+            water_temperature=5.0,
+            water_discharge=40.0,
+        ),
+        HydroObservation(
+            observation_datetime="2023-01-01 13:00:00",
+            water_level=121.5,
+            water_temperature=5.2,
+            water_discharge=41.0,
+        ),
+    ]
 
-        obs_data = HydroObservationData(
-            station=station,
-            observations_data_range="2023-01-01 to 2023-01-31",
-            observations=observations,
-        )
+    obs_data = HydroObservationData(
+        station=station,
+        observations_data_range="2023-01-01 to 2023-01-31",
+        observations=observations,
+    )
 
-        self.assertEqual(obs_data.station, station)
-        self.assertEqual(obs_data.observations_data_range, "2023-01-01 to 2023-01-31")
-        self.assertEqual(len(obs_data.observations), 2)
-        self.assertEqual(obs_data.observations[0].water_level, 120.0)
-        self.assertEqual(obs_data.observations[1].water_level, 121.5)
+    assert obs_data.station == station
+    assert obs_data.observations_data_range == "2023-01-01 to 2023-01-31"
+    assert len(obs_data.observations) == 2
+    assert obs_data.observations[0].water_level == 120.0
+    assert obs_data.observations[1].water_level == 121.5
 
-    def test_hydro_observation_data_empty_observations(self):
-        """Test HydroObservationData with no observations."""
-        station = HydroStation(
-            code="station_004",
-            name="Empty Station",
-            water_body="Empty River",
-            coordinates=Coordinates(latitude=54.1, longitude=24.1),
-        )
 
-        obs_data = HydroObservationData(
-            station=station,
-            observations_data_range="2023-01-01 to 2023-01-31",
-            observations=[],
-        )
+def test_hydro_observation_data_empty_observations():
+    """Test HydroObservationData with no observations."""
+    station = HydroStation(
+        code="station_004",
+        name="Empty Station",
+        water_body="Empty River",
+        coordinates=Coordinates(latitude=54.1, longitude=24.1),
+    )
 
-        self.assertEqual(obs_data.station, station)
-        self.assertEqual(len(obs_data.observations), 0)
+    obs_data = HydroObservationData(
+        station=station,
+        observations_data_range="2023-01-01 to 2023-01-31",
+        observations=[],
+    )
 
-    def test_hydro_observation_data_from_dict(self):
-        """Test HydroObservationData from_dict conversion."""
-        data = {
-            "station": {
-                "code": "station_005",
-                "name": "API Station",
-                "waterBody": "API River",
-                "coordinates": {"latitude": 54.3, "longitude": 24.3},
+    assert obs_data.station == station
+    assert len(obs_data.observations) == 0
+
+
+def test_hydro_observation_data_from_dict():
+    """Test HydroObservationData from_dict conversion."""
+    data = {
+        "station": {
+            "code": "station_005",
+            "name": "API Station",
+            "waterBody": "API River",
+            "coordinates": {"latitude": 54.3, "longitude": 24.3},
+        },
+        "observationsDataRange": "2023-01-01 to 2023-01-31",
+        "observations": [
+            {
+                "observationTimeUtc": "2023-01-01 12:00:00",
+                "waterLevel": 125.0,
+                "waterTemperature": 6.0,
+                "waterDischarge": 45.0,
             },
-            "observationsDataRange": "2023-01-01 to 2023-01-31",
-            "observations": [
-                {
-                    "observationTimeUtc": "2023-01-01 12:00:00",
-                    "waterLevel": 125.0,
-                    "waterTemperature": 6.0,
-                    "waterDischarge": 45.0,
-                },
-                {
-                    "observationTimeUtc": "2023-01-01 13:00:00",
-                    "waterLevel": 124.8,
-                    "waterTemperature": 6.1,
-                    "waterDischarge": 44.8,
-                },
-            ],
-        }
+            {
+                "observationTimeUtc": "2023-01-01 13:00:00",
+                "waterLevel": 124.8,
+                "waterTemperature": 6.1,
+                "waterDischarge": 44.8,
+            },
+        ],
+    }
 
-        obs_data = HydroObservationData.from_dict(data)
+    obs_data = HydroObservationData.from_dict(data)
 
-        self.assertIsInstance(obs_data, HydroObservationData)
-        self.assertEqual(obs_data.station.code, "station_005")
-        self.assertEqual(obs_data.station.name, "API Station")
-        self.assertEqual(len(obs_data.observations), 2)
-        # Check that observations were parsed (water_level, temperature, discharge may not map without json_key)
-        self.assertIsNotNone(obs_data.observations[0])
+    assert isinstance(obs_data, HydroObservationData)
+    assert obs_data.station.code == "station_005"
+    assert obs_data.station.name == "API Station"
+    assert len(obs_data.observations) == 2
+    assert obs_data.observations[0] is not None
 
-    def test_hydro_station_coordinates_properties(self):
-        """Test that HydroStation inherits location base properties."""
-        station = HydroStation(
-            code="station_006",
-            name="Property Test Station",
-            water_body="Property Test River",
-            coordinates=Coordinates(latitude=55.1, longitude=23.9),
-        )
 
-        # Test inherited properties from LocationBase
-        self.assertEqual(station.latitude, 55.1)
-        self.assertEqual(station.longitude, 23.9)
+# Tests - MeteoWarning
+@pytest.mark.parametrize(
+    "category,warning_type,severity,instruction",
+    [
+        ("weather", "wind", "Moderate", "Stay indoors"),
+        ("weather", "storm", "High", None),
+        ("hydro", "flood", "Extreme", "Evacuate immediately"),
+        ("weather", "rain", "Minor", None),
+    ],
+)
+def test_meteo_warning_creation(category, warning_type, severity, instruction):
+    """Test MeteoWarning creation with various configurations."""
+    kwargs = {
+        "county": "Test County",
+        "warning_type": warning_type,
+        "severity": severity,
+        "description": f"Test {warning_type} warning",
+        "category": category,
+    }
+
+    if instruction:
+        kwargs["instruction"] = instruction
+        kwargs["start_time"] = "2025-09-30T12:00:00Z"
+        kwargs["end_time"] = "2025-09-30T18:00:00Z"
+
+    warning = MeteoWarning(**kwargs)
+
+    assert warning.category == category
+    assert warning.warning_type == warning_type
+    assert warning.severity == severity
+    assert warning.instruction == instruction
+
+    if instruction:
+        assert warning.start_time == "2025-09-30T12:00:00Z"
+        assert warning.end_time == "2025-09-30T18:00:00Z"
+    else:
+        assert warning.start_time is None
+        assert warning.end_time is None
+
+
+def test_meteo_warning_default_category():
+    """Test MeteoWarning default category is 'weather'."""
+    warning = MeteoWarning(
+        county="Test County",
+        warning_type="wind",
+        severity="Low",
+        description="Test warning",
+    )
+
+    assert warning.category == "weather"
+    assert warning.start_time is None
+    assert warning.end_time is None
+    assert warning.instruction is None

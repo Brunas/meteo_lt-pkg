@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field, fields
 from datetime import datetime, timezone
-from typing import List, Optional, Dict, Any, Type
+from typing import Any, Dict, List, Optional, Type
 
 from .const import COUNTY_MUNICIPALITIES
 
@@ -60,6 +60,7 @@ class MeteoWarning:
     category: str = "weather"  # "weather" or "hydro"
     start_time: Optional[str] = None
     end_time: Optional[str] = None
+    instruction: Optional[str] = None
 
 
 @dataclass
