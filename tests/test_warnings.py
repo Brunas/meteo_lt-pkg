@@ -83,7 +83,7 @@ async def test_get_weather_warnings_success(api_client, mock_file_list, mock_war
 
         assert isinstance(warnings, list)
         assert len(warnings) == 1
-        assert warnings[0].county == "Kauno apskritis"
+        assert warnings[0].administrative_division == "Kauno apskritis"
         assert warnings[0].warning_type == "wind"
         assert warnings[0].severity == "Moderate"
 

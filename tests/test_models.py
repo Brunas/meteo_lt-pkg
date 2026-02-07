@@ -13,6 +13,7 @@ from meteo_lt.models import (
     HydroStation,
     MeteoWarning,
     Place,
+    find_nearest_location,
 )
 
 
@@ -392,7 +393,7 @@ def test_hydro_observation_data_from_dict():
 def test_meteo_warning_creation(category, warning_type, severity, instruction):
     """Test MeteoWarning creation with various configurations."""
     kwargs = {
-        "county": "Test County",
+        "administrative_division": "Test County",
         "warning_type": warning_type,
         "severity": severity,
         "description": f"Test {warning_type} warning",
@@ -422,7 +423,7 @@ def test_meteo_warning_creation(category, warning_type, severity, instruction):
 def test_meteo_warning_default_category():
     """Test MeteoWarning default category is 'weather'."""
     warning = MeteoWarning(
-        county="Test County",
+        administrative_division="Test County",
         warning_type="wind",
         severity="Low",
         description="Test warning",
@@ -432,3 +433,118 @@ def test_meteo_warning_default_category():
     assert warning.start_time is None
     assert warning.end_time is None
     assert warning.instruction is None
+
+
+# Tests - find_nearest_location
+class TestFindNearestLocation:
+    """Tests for find_nearest_location function"""
+
+    @pytest.fixture
+    def lithuanian_cities(self):
+        """Fixture providing three Lithuanian city Place objects"""
+        return [
+            Place(
+                code="vilnius",
+                name="Vilnius",
+                coordinates=Coordinates(latitude=54.6872, longitude=25.2797),
+                administrative_division="Vilnius",
+                country_code="LT",
+            ),
+            Place(
+                code="kaunas",
+                name="Kaunas",
+                coordinates=Coordinates(latitude=54.8985, longitude=23.9036),
+                administrative_division="Kaunas",
+                country_code="LT",
+            ),
+            Place(
+                code="klaipeda",
+                name="Klaipėda",
+                coordinates=Coordinates(latitude=55.7033, longitude=21.1443),
+                administrative_division="Klaipėda",
+                country_code="LT",
+            ),
+        ]
+
+    def test_single_location(self):
+        """Test with single location in list"""
+        location = Place(
+            code="test",
+            name="Test",
+            coordinates=Coordinates(latitude=54.6872, longitude=25.2797),
+            administrative_division="Vilnius",
+            country_code="LT",
+        )
+        nearest = find_nearest_location(54.7, 25.3, [location])
+        assert nearest == location
+
+    @pytest.mark.parametrize(
+        "query_lat,query_lon,expected_code",
+        [
+            (54.7, 25.3, "vilnius"),  # Point closer to Vilnius
+            (54.9, 23.9, "kaunas"),  # Point closer to Kaunas
+            (55.7, 21.2, "klaipeda"),  # Point closer to Klaipėda
+        ],
+    )
+    def test_finds_closest_location(self, lithuanian_cities, query_lat, query_lon, expected_code):
+        """Test that function finds the closest location"""
+        nearest = find_nearest_location(query_lat, query_lon, lithuanian_cities)
+        assert nearest.code == expected_code
+
+    def test_exact_match(self):
+        """Test with coordinates exactly matching a location"""
+        location1 = Place(
+            code="loc1",
+            name="Location 1",
+            coordinates=Coordinates(latitude=54.0, longitude=25.0),
+            administrative_division="Test1",
+            country_code="LT",
+        )
+        location2 = Place(
+            code="loc2",
+            name="Location 2",
+            coordinates=Coordinates(latitude=55.0, longitude=26.0),
+            administrative_division="Test2",
+            country_code="LT",
+        )
+
+        nearest = find_nearest_location(54.0, 25.0, [location1, location2])
+        assert nearest == location1
+
+    def test_multiple_locations_different_distances(self):
+        """Test with multiple locations at varying distances"""
+        locations = [
+            Place(
+                code=f"loc{i}",
+                name=f"Location {i}",
+                coordinates=Coordinates(latitude=54.0 + i * 0.5, longitude=25.0 + i * 0.5),
+                administrative_division=f"Test{i}",
+                country_code="LT",
+            )
+            for i in range(5)
+        ]
+
+        # Query point closest to location index 2
+        nearest = find_nearest_location(55.0, 26.0, locations)
+        assert nearest.code == "loc2"
+
+    def test_order_independence(self):
+        """Test that order of locations in list doesn't affect result"""
+        loc1 = Place(
+            code="loc1",
+            name="Location 1",
+            coordinates=Coordinates(latitude=54.0, longitude=25.0),
+            administrative_division="Test1",
+            country_code="LT",
+        )
+        loc2 = Place(
+            code="loc2",
+            name="Location 2",
+            coordinates=Coordinates(latitude=55.0, longitude=26.0),
+            administrative_division="Test2",
+            country_code="LT",
+        )
+
+        nearest1 = find_nearest_location(54.1, 25.1, [loc1, loc2])
+        nearest2 = find_nearest_location(54.1, 25.1, [loc2, loc1])
+        assert nearest1 == nearest2 == loc1

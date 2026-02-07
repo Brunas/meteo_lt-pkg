@@ -1,8 +1,18 @@
 """utils.py"""
 
-from math import radians, sin, cos, sqrt, atan2
-from typing import List
-from meteo_lt.models import LocationBase
+from math import atan2, cos, radians, sin, sqrt
+
+
+def normalize_administrative_division(name: str) -> str:
+    """Normalize administrative division name to handle different formats."""
+    return (
+        name.lower()
+        .replace(" savivaldybė", "")
+        .replace(" sav.", "")
+        .replace(" miesto", " m.")
+        .replace(" rajono", " r.")
+        .strip()
+    )
 
 
 def haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -17,20 +27,3 @@ def haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     c = 2 * atan2(sqrt(a), sqrt(1 - a))
     r = 6371  # Radius of Earth in kilometers
     return r * c
-
-
-def find_nearest_location(latitude: float, longitude: float, locations: List[LocationBase]) -> LocationBase:
-    """Find the nearest location from a list of locations based on the given latitude and longitude."""
-    nearest_location = None
-    min_distance = float("inf")
-
-    for location in locations:
-        location_lat = location.latitude
-        location_lon = location.longitude
-        distance = haversine(latitude, longitude, location_lat, location_lon)
-
-        if distance < min_distance:
-            min_distance = distance
-            nearest_location = location
-
-    return nearest_location
