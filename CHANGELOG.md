@@ -1,6 +1,6 @@
 ## Release 0.6.1
 
-Date: `2026-02-06`
+Date: `2026-02-07`
 
 ### Changes
 
