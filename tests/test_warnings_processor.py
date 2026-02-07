@@ -73,7 +73,7 @@ def create_alert(
 
 
 def create_warning(
-    administrative_area="Test",
+    administrative_division="Test",
     warning_type="wind",
     severity="Moderate",
     description="Test",
@@ -82,7 +82,7 @@ def create_warning(
 ):
     """Create test warning"""
     return MeteoWarning(
-        administrative_area=administrative_area,
+        administrative_division=administrative_division,
         warning_type=warning_type,
         severity=severity,
         description=description,
@@ -129,7 +129,7 @@ def test_parse_warnings_data(warnings_processor, mock_warnings_data):
     warnings = warnings_processor._parse_warnings_data(mock_warnings_data)
 
     assert len(warnings) == 1
-    assert warnings[0].administrative_area == "Kauno apskritis"
+    assert warnings[0].administrative_division == "Kauno apskritis"
     assert warnings[0].warning_type == "wind"
     assert warnings[0].severity == "Moderate"
 
@@ -147,7 +147,7 @@ def test_create_warning_from_alert(warnings_processor):
     area = {"name": "Kauno apskritis"}
     warning = warnings_processor._create_warning_from_alert(alert, area)
 
-    assert warning.administrative_area == "Kauno apskritis"
+    assert warning.administrative_division == "Kauno apskritis"
     assert warning.warning_type == "wind"
     assert warning.severity == "Moderate"
     assert warning.description == "Strong wind"
@@ -267,44 +267,7 @@ def test_parse_warnings_with_empty_area_groups(client):
     assert len(warnings) == 0
 
 
-# Tests - Category Filtering
-@pytest.mark.parametrize(
-    "processor_category,expected_type,expected_count",
-    [
-        ("hydro", "flood", 1),
-        ("weather", "wind", 1),
-    ],
-)
-def test_parse_warnings_filters_by_category(client, processor_category, expected_type, expected_count):
-    """Test that processor correctly filters warnings by category"""
-    processor = WarningsProcessor(client, category=processor_category)
-
-    mixed_data = {
-        "phenomenon_groups": [
-            {
-                "phenomenon_category": "wind",
-                "area_groups": [
-                    {
-                        "areas": [{"id": "lt.county:LT001", "name": "Test"}],
-                        "single_alerts": [create_alert(phenomenon="wind", description_lt="Vėjas")],
-                    }
-                ],
-            },
-            {
-                "phenomenon_category": "hydrological",
-                "area_groups": [
-                    {
-                        "areas": [{"id": "lt.hydro:LT001", "name": "River"}],
-                        "single_alerts": [create_alert(phenomenon="flood", description_lt="Potvynis")],
-                    }
-                ],
-            },
-        ]
-    }
-
-    warnings = processor._parse_warnings_data(mixed_data)
-    assert len(warnings) == expected_count
-    assert warnings[0].warning_type == expected_type
+# Tests - Parsing
 
 
 def test_parse_hydro_warnings_data(client):
@@ -354,14 +317,14 @@ def test_parse_hydro_warnings_data(client):
 )
 def test_warning_affects_area(warnings_processor, admin_division, should_match):
     """Test if warning affects specific administrative division"""
-    warning = create_warning(administrative_area="Kauno apskritis")
+    warning = create_warning(administrative_division="Kauno apskritis")
     assert warnings_processor._warning_affects_area(warning, admin_division) == should_match
 
 
 def test_warning_affects_area_with_sav_abbreviation(client):
     """Test warning area matching with savivaldybė abbreviations"""
     processor = WarningsProcessor(client, category="weather")
-    warning = create_warning(administrative_area="Vilniaus miesto savivaldybė")
+    warning = create_warning(administrative_division="Vilniaus miesto savivaldybė")
 
     assert processor._warning_affects_area(warning, "Vilniaus miesto sav.")
     assert processor._warning_affects_area(warning, "Vilniaus miesto")
@@ -447,7 +410,7 @@ async def test_get_weather_warnings(warnings_processor, mock_warnings_data):
         warnings = await warnings_processor.get_warnings()
 
         assert len(warnings) == 1
-        assert warnings[0].administrative_area == "Kauno apskritis"
+        assert warnings[0].administrative_division == "Kauno apskritis"
 
 
 @pytest.mark.asyncio

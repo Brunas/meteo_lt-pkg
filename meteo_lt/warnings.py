@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Literal, Optional
 from .client import MeteoLtClient
 from .const import COUNTY_MUNICIPALITIES, HYDRO_WARNINGS_URL, WARNINGS_URL
 from .models import Forecast, MeteoWarning
+from .utils import normalize_administrative_division
 
 WarningCategory = Literal["weather", "hydro"]
 
@@ -43,14 +44,6 @@ class WarningsProcessor:
 
         # Parse the warnings data
         for phenomenon_group in warnings_data.get("phenomenon_groups", []):
-            phenomenon_category = phenomenon_group.get("phenomenon_category")
-
-            # Filter based on category
-            if self.category == "hydro" and phenomenon_category != "hydrological":
-                continue
-            if self.category == "weather" and phenomenon_category == "hydrological":
-                continue
-
             for area_group in phenomenon_group.get("area_groups", []):
                 for alert in area_group.get("single_alerts", []):
                     # Skip alerts with no phenomenon or empty descriptions
@@ -67,7 +60,7 @@ class WarningsProcessor:
 
     def _create_warning_from_alert(self, alert: Dict[str, Any], area: Dict[str, Any]) -> MeteoWarning:
         """Create a MeteoWarning from alert data"""
-        administrative_area = area.get("name", "Unknown")
+        administrative_division = area.get("name", "Unknown")
         phenomenon = alert.get("phenomenon", "")
         severity = alert.get("severity", "Minor")
 
@@ -80,7 +73,7 @@ class WarningsProcessor:
         instruction = inst_dict.get("en") or inst_dict.get("lt", "") or None
 
         return MeteoWarning(
-            administrative_area=administrative_area,
+            administrative_division=administrative_division,
             warning_type=warning_type,
             severity=severity,
             description=description,
@@ -91,20 +84,19 @@ class WarningsProcessor:
         )
 
     def _warning_affects_area(self, warning: MeteoWarning, administrative_division: str) -> bool:
-        """Check if warning affects specified administrative division"""
-        admin_lower = administrative_division.lower().replace(" savivaldybė", "").replace(" sav.", "")
+        """Check if warning affects the specified municipality."""
+        municipality_norm = normalize_administrative_division(administrative_division)
+        warning_area_norm = normalize_administrative_division(warning.administrative_division)
 
-        # Check if the administrative division matches the warning area
-        if admin_lower in warning.administrative_area.lower():
+        # Direct match: warning is for this specific municipality
+        if municipality_norm in warning_area_norm or warning_area_norm in municipality_norm:
             return True
 
-        # Check if the administrative division is in the warning area's municipalities
-        if warning.administrative_area in COUNTY_MUNICIPALITIES:
-            municipalities = COUNTY_MUNICIPALITIES[warning.administrative_area]
-            for municipality in municipalities:
-                mun_clean = municipality.lower().replace(" savivaldybė", "").replace(" sav.", "")
-                if admin_lower in mun_clean or mun_clean in admin_lower:
-                    return True
+        # County match: warning is for a county that contains this municipality
+        if warning.administrative_division in COUNTY_MUNICIPALITIES:
+            municipalities_in_county = COUNTY_MUNICIPALITIES[warning.administrative_division]
+            municipalities_norm = [normalize_administrative_division(m) for m in municipalities_in_county]
+            return any(municipality_norm in m_norm or m_norm in municipality_norm for m_norm in municipalities_norm)
 
         return False
 

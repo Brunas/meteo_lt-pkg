@@ -209,7 +209,7 @@ async def test_get_hydro_warnings():
     """Test fetching hydrological warnings"""
     async with MeteoLtAPI() as api_client:
         mock_warnings = [
-            MagicMock(administrative_area="Kauno apskritis", warning_type="flood", severity="High"),
+            MagicMock(administrative_division="Kauno apskritis", warning_type="flood", severity="High"),
         ]
 
         with patch.object(api_client.hydro_warnings_processor, "get_warnings") as mock_get:
@@ -304,7 +304,7 @@ async def test_enrich_forecast_with_warnings_valid_data(mock_timestamp):
         )
 
         mock_warning = MeteoWarning(
-            administrative_area="Kauno apskritis",
+            administrative_division="Kauno apskritis",
             warning_type="wind",
             severity="Moderate",
             description="Test warning",

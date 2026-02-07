@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Type
 
 from .const import COUNTY_MUNICIPALITIES
+from .utils import haversine, normalize_administrative_division
 
 
 @dataclass
@@ -44,16 +45,35 @@ class Place(LocationBase):
 
     def __post_init__(self):
         self.counties = []
+        normalized_division = normalize_administrative_division(self.administrative_division)
         for county, municipalities in COUNTY_MUNICIPALITIES.items():
-            if self.administrative_division.replace(" savivaldybė", "") in municipalities:
+            normalized_municipalities = [normalize_administrative_division(m) for m in municipalities]
+            if normalized_division in normalized_municipalities:
                 self.counties.append(county)
+
+
+def find_nearest_location(latitude: float, longitude: float, locations: List[LocationBase]) -> LocationBase:
+    """Find the nearest location from a list of locations based on the given latitude and longitude."""
+    nearest_location = None
+    min_distance = float("inf")
+
+    for location in locations:
+        location_lat = location.latitude
+        location_lon = location.longitude
+        distance = haversine(latitude, longitude, location_lat, location_lon)
+
+        if distance < min_distance:
+            min_distance = distance
+            nearest_location = location
+
+    return nearest_location
 
 
 @dataclass
 class MeteoWarning:
     """Meteorological Warning (includes both weather and hydrological warnings)"""
 
-    administrative_area: str
+    administrative_division: str
     warning_type: str
     severity: str
     description: str
