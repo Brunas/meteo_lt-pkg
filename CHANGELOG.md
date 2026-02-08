@@ -1,3 +1,14 @@
+## Release 0.6.2
+
+Date: `2026-02-08`
+
+### Changes
+
+- **Fixed warnings categorization bug**: Weather warnings were incorrectly appearing with `category='hydro'` due to duplicate data in API endpoints
+- **Optimized API calls**: Eliminated duplicate warnings fetch (both WEATHER_URL and HYDRO_URL returned identical data)
+- **Simplified architecture**: Unified warnings processor - replaced dual processor instances with single processor using method-level category filtering
+- Optimized tests
+
 ## Release 0.6.1
 
 Date: `2026-02-07`

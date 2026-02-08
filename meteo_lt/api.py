@@ -1,6 +1,5 @@
 """Main API class script"""
 
-import asyncio
 from typing import List, Optional
 
 from .client import MeteoLtClient
@@ -21,8 +20,7 @@ class MeteoLtAPI:
     def __init__(self, session=None):
         self.places = []
         self.client = MeteoLtClient(session)
-        self.warnings_processor = WarningsProcessor(self.client, category="weather")
-        self.hydro_warnings_processor = WarningsProcessor(self.client, category="hydro")
+        self.warnings_processor = WarningsProcessor(self.client)
 
     async def __aenter__(self):
         """Async context manager entry"""
@@ -78,18 +76,15 @@ class MeteoLtAPI:
 
     async def get_weather_warnings(self, administrative_division: str = None) -> List[MeteoWarning]:
         """Fetches weather warnings from meteo.lt JSON API"""
-        return await self.warnings_processor.get_warnings(administrative_division)
+        return await self.warnings_processor.get_weather_warnings(administrative_division)
 
     async def get_hydro_warnings(self, administrative_division: str = None) -> List[MeteoWarning]:
         """Fetches hydrological warnings from meteo.lt JSON API"""
-        return await self.hydro_warnings_processor.get_warnings(administrative_division)
+        return await self.warnings_processor.get_hydro_warnings(administrative_division)
 
     async def get_all_warnings(self, administrative_division: str = None) -> List[MeteoWarning]:
         """Fetches both weather and hydrological warnings from meteo.lt JSON API"""
-        weather_task = self.warnings_processor.get_warnings(administrative_division)
-        hydro_task = self.hydro_warnings_processor.get_warnings(administrative_division)
-        weather_warnings, hydro_warnings = await asyncio.gather(weather_task, hydro_task)
-        return weather_warnings + hydro_warnings
+        return await self.warnings_processor.get_all_warnings(administrative_division)
 
     async def _enrich_forecast_with_warnings(self, forecast: Forecast) -> None:
         """Enrich forecast timestamps with all relevant warnings (weather and hydrological)"""
@@ -99,7 +94,6 @@ class MeteoLtAPI:
         all_warnings = await self.get_all_warnings(forecast.place.administrative_division)
 
         if all_warnings:
-            # Use weather processor to enrich (logic is the same for both)
             self.warnings_processor.enrich_forecast_with_warnings(forecast, all_warnings)
 
     async def fetch_hydro_stations(self) -> List[HydroStation]:

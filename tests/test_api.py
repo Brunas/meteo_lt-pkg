@@ -195,7 +195,7 @@ async def test_get_forecast_with_and_without_warnings(mock_forecast, include_war
 async def test_get_weather_warnings():
     """Test getting weather warnings"""
     async with MeteoLtAPI() as api_client:
-        with patch.object(api_client.warnings_processor, "get_warnings") as mock_get:
+        with patch.object(api_client.warnings_processor, "get_weather_warnings") as mock_get:
             mock_warnings = []
             mock_get.return_value = mock_warnings
 
@@ -212,7 +212,7 @@ async def test_get_hydro_warnings():
             MagicMock(administrative_division="Kauno apskritis", warning_type="flood", severity="High"),
         ]
 
-        with patch.object(api_client.hydro_warnings_processor, "get_warnings") as mock_get:
+        with patch.object(api_client.warnings_processor, "get_hydro_warnings") as mock_get:
             mock_get.return_value = mock_warnings
 
             result = await api_client.get_hydro_warnings("Kauno apskritis")
@@ -225,15 +225,13 @@ async def test_get_hydro_warnings():
 async def test_get_all_warnings():
     """Test fetching all warnings (weather and hydro combined)"""
     async with MeteoLtAPI() as api_client:
-        weather_warnings = [MagicMock(warning_type="wind")]
-        hydro_warnings = [MagicMock(warning_type="flood")]
+        all_warnings = [
+            MagicMock(warning_type="wind"),
+            MagicMock(warning_type="flood"),
+        ]
 
-        with (
-            patch.object(api_client.warnings_processor, "get_warnings") as mock_weather,
-            patch.object(api_client.hydro_warnings_processor, "get_warnings") as mock_hydro,
-        ):
-            mock_weather.return_value = weather_warnings
-            mock_hydro.return_value = hydro_warnings
+        with patch.object(api_client.warnings_processor, "get_all_warnings") as mock_all:
+            mock_all.return_value = all_warnings
 
             result = await api_client.get_all_warnings()
 
