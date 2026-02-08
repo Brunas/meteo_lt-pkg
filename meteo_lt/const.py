@@ -2,7 +2,6 @@
 
 BASE_URL = "https://api.meteo.lt/v1"
 WARNINGS_URL = "https://www.meteo.lt/app/mu-plugins/Meteo/Components/WeatherWarningsNew/list_JSON.php"
-HYDRO_WARNINGS_URL = "https://www.meteo.lt/app/mu-plugins/Meteo/Components/HydroWarnings/list_JSON.php"
 TIMEOUT = 30
 ENCODING = "utf-8"
 

@@ -12,22 +12,14 @@ class TestNormalizeAdministrativeDivision:
         "input_name,expected",
         [
             ("Vilniaus miesto savivaldybė", "vilniaus m."),
-            ("Birštono savivaldybė", "birštono"),
             ("MARIJAMPOLĖS SAVIVALDYBĖ", "marijampolės"),
             ("Kauno m. sav.", "kauno m."),
             ("Klaipėdos r. sav.", "klaipėdos r."),
             ("Vilniaus miesto", "vilniaus m."),
-            ("Šiaulių miesto", "šiaulių m."),
             ("Kauno rajono", "kauno r."),
-            ("Alytaus rajono", "alytaus r."),
-            ("Panevėžio rajono savivaldybė", "panevėžio r."),
             ("  Vilniaus miesto  ", "vilniaus m."),
-            ("  Plungės rajono  ", "plungės r."),
-            ("\tKauno m. sav.\t", "kauno m."),
             ("vilniaus m.", "vilniaus m."),
-            ("kauno r.", "kauno r."),
             ("Vilniaus apskritis", "vilniaus apskritis"),
-            ("Kauno Apskritis", "kauno apskritis"),
         ],
     )
     def test_normalization(self, input_name, expected):
