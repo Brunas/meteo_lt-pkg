@@ -76,11 +76,23 @@ class MeteoWarning:
     administrative_division: str
     warning_type: str
     severity: str
-    description: str
+    description: Optional[Dict[str, str]] = None  # {"lt": "...", "en": "..."}
+    instruction: Optional[Dict[str, str]] = None  # {"lt": "...", "en": "..."}
     category: str = "weather"  # "weather" or "hydro"
     start_time: Optional[str] = None
     end_time: Optional[str] = None
-    instruction: Optional[str] = None
+
+    def get_description(self, language: str = "en") -> Optional[str]:
+        """Get description in specified language, fallback to English if not available"""
+        if not self.description:
+            return None
+        return self.description.get(language) or self.description.get("en")
+
+    def get_instruction(self, language: str = "en") -> Optional[str]:
+        """Get instruction in specified language, fallback to English if not available"""
+        if not self.instruction:
+            return None
+        return self.instruction.get(language) or self.instruction.get("en")
 
 
 @dataclass

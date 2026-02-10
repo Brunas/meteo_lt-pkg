@@ -73,7 +73,7 @@ async def main():
         warnings = await api.get_weather_warnings("Vilniaus miesto")
         print(f"Active warnings: {len(warnings)}")
         for warning in warnings:
-            print(f"- {warning.warning_type}: {warning.description}")
+            print(f"- {warning.warning_type}: {warning.get_description()}")
 
 asyncio.run(main())
 ```
@@ -197,9 +197,10 @@ async def fetch_warnings():
         for warning in warnings:
             print(f"Warning: {warning.warning_type} in {warning.administrative_division}")
             print(f"Severity: {warning.severity}")
-            print(f"Description: {warning.description}")
-            if warning.instruction:
-                print(f"Instruction: {warning.instruction}")
+            print(f"Description (EN): {warning.get_description('en')}")
+            print(f"Description (LT): {warning.get_description('lt')}")
+            if warning.get_instruction():
+                print(f"Instruction: {warning.get_instruction()}")
             print(f"Active: {warning.start_time} to {warning.end_time}")
             print("-" * 50)
 
@@ -230,9 +231,9 @@ async def fetch_hydro_warnings():
         for warning in hydro_warnings:
             print(f"Hydro Warning: {warning.warning_type} in {warning.administrative_division}")
             print(f"Severity: {warning.severity}")
-            print(f"Description: {warning.description}")
-            if warning.instruction:
-                print(f"Instruction: {warning.instruction}")
+            print(f"Description: {warning.get_description()}")
+            if warning.get_instruction():
+                print(f"Instruction: {warning.get_instruction()}")
             print("-" * 50)
 
 async def fetch_hydro_warnings_for_area():
@@ -259,9 +260,9 @@ async def fetch_all_warnings():
         for warning in all_warnings:
             print(f"{warning.warning_type} in {warning.administrative_division}")
             print(f"Severity: {warning.severity}")
-            print(f"Description: {warning.description}")
-            if warning.instruction:
-                print(f"Instruction: {warning.instruction}")
+            print(f"Description: {warning.get_description()}")
+            if warning.get_instruction():
+                print(f"Instruction: {warning.get_instruction()}")
             print("-" * 50)
 
 async def fetch_all_warnings_for_area():
@@ -365,33 +366,52 @@ Represents a meteorological warning (weather or hydrological) for a specific are
 ```python
 from meteo_lt import MeteoWarning
 
-# Weather warning example
+# Weather warning example with multilingual support
 weather_warning = MeteoWarning(
     administrative_division="Vilniaus apskritis",
     warning_type="frost",
     severity="Moderate",
-    description="Ground surface frost 0-5 degrees in many places",
-    instruction="Protect sensitive plants and be cautious on roads",  # Optional safety instruction
+    description={
+        "en": "Ground surface frost 0-5 degrees in many places",
+        "lt": "Paviršiaus šalna 0-5 laipsniai daugelyje vietų"
+    },
+    instruction={
+        "en": "Protect sensitive plants and be cautious on roads",
+        "lt": "Apsaugokite jautrias augalus ir būkite atsargūs keliuose"
+    },
     category="weather",
     start_time="2024-07-23T12:00:00Z",
     end_time="2024-07-23T18:00:00Z"
 )
-print(f"Warning for {weather_warning.administrative_division}: {weather_warning.description}")
-if weather_warning.instruction:
-    print(f"Safety instruction: {weather_warning.instruction}")
+print(f"Warning for {weather_warning.administrative_division}: {weather_warning.get_description('en')}")
+if weather_warning.get_instruction():
+    print(f"Safety instruction: {weather_warning.get_instruction('en')}")
 print(f"Category: {weather_warning.category}")  # "weather" or "hydro"
+
+# Access specific language directly from dictionary
+print(f"Lithuanian: {weather_warning.description['lt']}")
 
 # Hydrological warning example
 hydro_warning = MeteoWarning(
     administrative_division="Kauno apskritis",
     warning_type="flood",
     severity="High",
-    description="High water levels expected",
-    instruction="Avoid low-lying areas and do not attempt to cross flooded roads",  # Optional
+    description={
+        "en": "High water levels expected",
+        "lt": "Tikėtini aukšti vandens lygiai"
+    },
+    instruction={
+        "en": "Avoid low-lying areas and do not attempt to cross flooded roads",
+        "lt": "Venkite žemumų ir nebandykite kirsti užlietų kelių"
+    },
     category="hydro",
     start_time="2024-07-23T12:00:00Z",
     end_time="2024-07-24T12:00:00Z"
 )
+
+# Get description with automatic English fallback
+print(hydro_warning.get_description())  # Returns English by default
+print(hydro_warning.get_description('lt'))  # Returns Lithuanian
 ```
 
 ### HydroStation

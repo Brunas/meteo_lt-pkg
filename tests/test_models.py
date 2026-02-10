@@ -382,26 +382,24 @@ def test_hydro_observation_data_from_dict():
 
 # Tests - MeteoWarning
 @pytest.mark.parametrize(
-    "category,warning_type,severity,instruction",
+    "category,warning_type,severity,has_times",
     [
-        ("weather", "wind", "Moderate", "Stay indoors"),
-        ("weather", "storm", "High", None),
-        ("hydro", "flood", "Extreme", "Evacuate immediately"),
-        ("weather", "rain", "Minor", None),
+        ("weather", "wind", "Moderate", True),
+        ("weather", "storm", "High", False),
+        ("hydro", "flood", "Extreme", True),
+        ("weather", "rain", "Minor", False),
     ],
 )
-def test_meteo_warning_creation(category, warning_type, severity, instruction):
+def test_meteo_warning_creation(category, warning_type, severity, has_times):
     """Test MeteoWarning creation with various configurations."""
     kwargs = {
         "administrative_division": "Test County",
         "warning_type": warning_type,
         "severity": severity,
-        "description": f"Test {warning_type} warning",
         "category": category,
     }
 
-    if instruction:
-        kwargs["instruction"] = instruction
+    if has_times:
         kwargs["start_time"] = "2025-09-30T12:00:00Z"
         kwargs["end_time"] = "2025-09-30T18:00:00Z"
 
@@ -410,9 +408,8 @@ def test_meteo_warning_creation(category, warning_type, severity, instruction):
     assert warning.category == category
     assert warning.warning_type == warning_type
     assert warning.severity == severity
-    assert warning.instruction == instruction
 
-    if instruction:
+    if has_times:
         assert warning.start_time == "2025-09-30T12:00:00Z"
         assert warning.end_time == "2025-09-30T18:00:00Z"
     else:
@@ -426,13 +423,11 @@ def test_meteo_warning_default_category():
         administrative_division="Test County",
         warning_type="wind",
         severity="Low",
-        description="Test warning",
     )
 
     assert warning.category == "weather"
     assert warning.start_time is None
     assert warning.end_time is None
-    assert warning.instruction is None
 
 
 # Tests - find_nearest_location
