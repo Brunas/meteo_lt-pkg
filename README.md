@@ -197,6 +197,8 @@ async def fetch_warnings():
         for warning in warnings:
             print(f"Warning: {warning.warning_type} in {warning.administrative_division}")
             print(f"Severity: {warning.severity}")
+            if warning.get_headline():
+                print(f"Headline: {warning.get_headline('en')}")
             print(f"Description (EN): {warning.get_description('en')}")
             print(f"Description (LT): {warning.get_description('lt')}")
             if warning.get_instruction():
@@ -371,6 +373,10 @@ weather_warning = MeteoWarning(
     administrative_division="Vilniaus apskritis",
     warning_type="frost",
     severity="Moderate",
+    headline={
+        "en": "Moderate frost warning for Vilnius county",
+        "lt": "Vidutinio stiprumo šalnos įspėjimas Vilniaus apskrityje"
+    },
     description={
         "en": "Ground surface frost 0-5 degrees in many places",
         "lt": "Paviršiaus šalna 0-5 laipsniai daugelyje vietų"
@@ -383,19 +389,25 @@ weather_warning = MeteoWarning(
     start_time="2024-07-23T12:00:00Z",
     end_time="2024-07-23T18:00:00Z"
 )
+print(f"Headline: {weather_warning.get_headline('en')}")
 print(f"Warning for {weather_warning.administrative_division}: {weather_warning.get_description('en')}")
 if weather_warning.get_instruction():
     print(f"Safety instruction: {weather_warning.get_instruction('en')}")
 print(f"Category: {weather_warning.category}")  # "weather" or "hydro"
 
 # Access specific language directly from dictionary
-print(f"Lithuanian: {weather_warning.description['lt']}")
+print(f"Lithuanian headline: {weather_warning.headline['lt']}")
+print(f"Lithuanian description: {weather_warning.description['lt']}")
 
 # Hydrological warning example
 hydro_warning = MeteoWarning(
     administrative_division="Kauno apskritis",
     warning_type="flood",
     severity="High",
+    headline={
+        "en": "Flood warning for Kaunas county",
+        "lt": "Potvynio įspėjimas Kauno apskrityje"
+    },
     description={
         "en": "High water levels expected",
         "lt": "Tikėtini aukšti vandens lygiai"
@@ -409,7 +421,8 @@ hydro_warning = MeteoWarning(
     end_time="2024-07-24T12:00:00Z"
 )
 
-# Get description with automatic English fallback
+# Get headline, description, and instruction with automatic English fallback
+print(hydro_warning.get_headline())  # Returns English by default
 print(hydro_warning.get_description())  # Returns English by default
 print(hydro_warning.get_description('lt'))  # Returns Lithuanian
 ```

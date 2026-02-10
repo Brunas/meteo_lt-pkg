@@ -103,6 +103,7 @@ class WarningsProcessor:
         warning_type = re.sub(r"^(dangerous|severe|extreme)-", "", phenomenon)
 
         # Extract all translation dictionaries and filter out empty strings
+        headline = {k: v for k, v in alert.get("headline", {}).items() if v} or None
         description = {k: v for k, v in alert.get("description", {}).items() if v} or None
         instruction = {k: v for k, v in alert.get("instruction", {}).items() if v} or None
 
@@ -111,10 +112,11 @@ class WarningsProcessor:
             warning_type=warning_type,
             severity=severity,
             category=category,
-            start_time=alert.get("t_from"),
-            end_time=alert.get("t_to"),
+            headline=headline,
             description=description,
             instruction=instruction,
+            start_time=alert.get("t_from"),
+            end_time=alert.get("t_to"),
         )
 
     def _warning_affects_area(self, warning: MeteoWarning, administrative_division: str) -> bool:
