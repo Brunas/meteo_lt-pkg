@@ -1,3 +1,17 @@
+## Release 0.7.0
+
+Date: `2026-02-10`
+
+### Breaking Changes
+
+- **`MeteoWarning.description` and `MeteoWarning.instruction` are now dictionaries** containing translations by language code instead of plain strings
+  - Old approach: `warning.description` returned a string
+  - New approach: `warning.description` returns `Dict[str, str]` like `{"en": "Strong wind", "lt": "Stiprus vėjas"}`
+  - Use `warning.get_description(language="en")` to get translated text with automatic fallback to English
+  - Use `warning.get_instruction(language="lt")` for instructions with automatic fallback to English
+  - Direct dictionary access: `warning.description["lt"]` for Lithuanian text
+  - Backward compatibility is handled in the Home Assistant integration
+
 ## Release 0.6.2
 
 Date: `2026-02-08`

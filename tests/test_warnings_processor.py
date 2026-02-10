@@ -76,7 +76,6 @@ def create_warning(
     administrative_division="Test",
     warning_type="wind",
     severity="Moderate",
-    description="Test",
     start_time=None,
     end_time=None,
 ):
@@ -85,7 +84,6 @@ def create_warning(
         administrative_division=administrative_division,
         warning_type=warning_type,
         severity=severity,
-        description=description,
         start_time=start_time,
         end_time=end_time,
     )
@@ -150,8 +148,8 @@ def test_create_warning_from_alert(warnings_processor):
     assert warning.administrative_division == "Kauno apskritis"
     assert warning.warning_type == "wind"
     assert warning.severity == "Moderate"
-    assert warning.description == "Strong wind"
-    assert warning.instruction == "Be careful"
+    assert warning.get_description("en") == "Strong wind"
+    assert warning.get_instruction("en") == "Be careful"
 
 
 @pytest.mark.parametrize("severity", ["Minor", "Moderate", "High", "Extreme"])
@@ -185,7 +183,7 @@ def test_create_warning_with_no_instruction(client):
     alert = create_alert(description_en="Strong wind")
     warning = processor._create_warning_from_alert(alert, {"name": "Test"}, "weather")
 
-    assert warning.description == "Strong wind"
+    assert warning.get_description("en") == "Strong wind"
     assert warning.instruction is None
 
 
@@ -300,8 +298,8 @@ def test_parse_hydro_warnings_data(client):
     assert len(warnings) == 1
     assert warnings[0].warning_type == "flood"
     assert warnings[0].category == "hydro"
-    assert warnings[0].description == "Dangerous flood"
-    assert warnings[0].instruction == "Evacuate"
+    assert warnings[0].get_description("en") == "Dangerous flood"
+    assert warnings[0].get_instruction("en") == "Evacuate"
 
 
 # Tests - Area Matching
@@ -500,7 +498,7 @@ def test_enrich_forecast_extends_existing_warnings(client):
     forecast = create_forecast()
 
     # Pre-populate with existing warning
-    existing_warning = create_warning(warning_type="rain", severity="Low", description="Existing warning")
+    existing_warning = create_warning(warning_type="rain", severity="Low")
     forecast.current_conditions.warnings = [existing_warning]
 
     new_warning = create_warning(start_time="2025-09-30T12:00:00Z", end_time="2025-09-30T18:00:00Z")

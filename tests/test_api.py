@@ -305,7 +305,6 @@ async def test_enrich_forecast_with_warnings_valid_data(mock_timestamp):
             administrative_division="Kauno apskritis",
             warning_type="wind",
             severity="Moderate",
-            description="Test warning",
             start_time="2023-01-01T10:00:00Z",
             end_time="2023-01-01T14:00:00Z",
         )
