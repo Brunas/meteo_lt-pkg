@@ -1,5 +1,5 @@
 """Tests for multilingual warning support"""
-import pytest
+
 from meteo_lt.models import MeteoWarning
 
 
