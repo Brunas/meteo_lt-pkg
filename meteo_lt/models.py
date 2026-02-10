@@ -76,11 +76,38 @@ class MeteoWarning:
     administrative_division: str
     warning_type: str
     severity: str
-    description: str
+    description: str  # Default/preferred language (for backward compatibility)
     category: str = "weather"  # "weather" or "hydro"
     start_time: Optional[str] = None
     end_time: Optional[str] = None
-    instruction: Optional[str] = None
+    instruction: Optional[str] = None  # Default/preferred language
+    # Multilingual support - all available translations
+    description_translations: Optional[Dict[str, str]] = None  # {"lt": "...", "en": "..."}
+    instruction_translations: Optional[Dict[str, str]] = None  # {"lt": "...", "en": "..."}
+
+    def get_description(self, language: str = "en") -> str:
+        """Get description in specified language, fallback to default"""
+        if self.description_translations and language in self.description_translations:
+            return self.description_translations[language]
+        return self.description
+
+    def get_instruction(self, language: str = "en") -> Optional[str]:
+        """Get instruction in specified language, fallback to default"""
+        if self.instruction_translations and language in self.instruction_translations:
+            return self.instruction_translations[language]
+        return self.instruction
+
+    @property
+    def available_languages(self) -> List[str]:
+        """Get list of available language codes"""
+        languages = set()
+        for translations in [
+            self.description_translations,
+            self.instruction_translations,
+        ]:
+            if translations:
+                languages.update(translations.keys())
+        return sorted(list(languages))
 
 
 @dataclass

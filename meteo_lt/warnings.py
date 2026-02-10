@@ -102,11 +102,17 @@ class WarningsProcessor:
 
         warning_type = re.sub(r"^(dangerous|severe|extreme)-", "", phenomenon)
 
+        # Extract all translation dictionaries
         desc_dict = alert.get("description", {})
         inst_dict = alert.get("instruction", {})
 
+        # Default values (English preferred, then Lithuanian for backward compatibility)
         description = desc_dict.get("en") or desc_dict.get("lt", "")
         instruction = inst_dict.get("en") or inst_dict.get("lt", "") or None
+
+        # Store all available translations (filter out empty strings)
+        description_translations = {k: v for k, v in desc_dict.items() if v}
+        instruction_translations = {k: v for k, v in inst_dict.items() if v}
 
         return MeteoWarning(
             administrative_division=administrative_division,
@@ -117,6 +123,8 @@ class WarningsProcessor:
             start_time=alert.get("t_from"),
             end_time=alert.get("t_to"),
             instruction=instruction,
+            description_translations=description_translations or None,
+            instruction_translations=instruction_translations or None,
         )
 
     def _warning_affects_area(self, warning: MeteoWarning, administrative_division: str) -> bool:
