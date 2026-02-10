@@ -1,3 +1,14 @@
+## Release 0.7.1
+
+Date: `2026-02-10`
+
+### New Features
+
+- **Added `headline` field to `MeteoWarning`**: Warnings now include multilingual headline/title text from the API
+  - Access via `warning.headline` dictionary: `{"en": "...", "lt": "..."}`
+  - Use `warning.get_headline(language="en")` method with automatic fallback to English
+  - Example: `"Dangerous freezing rain/drizzle alert for Alytus county"`
+
 ## Release 0.7.0
 
 Date: `2026-02-10`
