@@ -59,6 +59,7 @@ class MeteoLtClient:
         """Gets all places from API"""
         session = await self._get_session()
         async with session.get(f"{BASE_URL}/places") as response:
+            response.raise_for_status()
             response.encoding = ENCODING
             response_json = await response.json()
             return [Place.from_dict(place) for place in response_json]
@@ -67,6 +68,7 @@ class MeteoLtClient:
         """Retrieves forecast data from API"""
         session = await self._get_session()
         async with session.get(f"{BASE_URL}/places/{place_code}/forecasts/long-term") as response:
+            response.raise_for_status()
             response.encoding = ENCODING
             response_json = await response.json()
             return Forecast.from_dict(response_json)
@@ -77,6 +79,7 @@ class MeteoLtClient:
 
         # Get the latest warnings file
         async with session.get(warnings_url) as response:
+            response.raise_for_status()
             file_list = await response.json()
 
         if not file_list:
@@ -85,6 +88,7 @@ class MeteoLtClient:
         # Fetch the latest warnings data
         latest_file_url = file_list[0]  # First file is the most recent
         async with session.get(latest_file_url) as response:
+            response.raise_for_status()
             text_data = await response.text()
             return json.loads(text_data)
 
@@ -92,6 +96,7 @@ class MeteoLtClient:
         """Get list of all hydrological stations."""
         session = await self._get_session()
         async with session.get(f"{BASE_URL}/hydro-stations") as resp:
+            resp.raise_for_status()
             if resp.status == 200:
                 resp.encoding = ENCODING
                 response = await resp.json()
@@ -105,6 +110,7 @@ class MeteoLtClient:
         """Get information about a specific hydrological station."""
         session = await self._get_session()
         async with session.get(f"{BASE_URL}/hydro-stations/{station_code}") as resp:
+            resp.raise_for_status()
             if resp.status == 200:
                 resp.encoding = ENCODING
                 response = await resp.json()
@@ -122,6 +128,7 @@ class MeteoLtClient:
         async with session.get(
             f"{BASE_URL}/hydro-stations/{station_code}/observations/{observation_type}/{date}"
         ) as resp:
+            resp.raise_for_status()
             if resp.status == 200:
                 response = await resp.json()
                 station = HydroStation.from_dict(response.get("station"))
