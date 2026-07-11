@@ -4,7 +4,7 @@
 
 import json
 from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiohttp
 import pytest
@@ -42,7 +42,7 @@ async def test_fetch_places(client):
     with patch("aiohttp.ClientSession.get") as mock_get:
         mock_response = AsyncMock()
         mock_response.json.return_value = mock_places_data
-        mock_response.raise_for_status.return_value = None
+        mock_response.raise_for_status = MagicMock()
         mock_response.encoding = "utf-8"
         mock_get.return_value.__aenter__.return_value = mock_response
 
@@ -87,7 +87,7 @@ async def test_fetch_forecast(client, tomorrow_date):
     with patch("aiohttp.ClientSession.get") as mock_get:
         mock_response = AsyncMock()
         mock_response.json.return_value = mock_forecast_data
-        mock_response.raise_for_status.return_value = None
+        mock_response.raise_for_status = MagicMock()
         mock_response.encoding = "utf-8"
         mock_get.return_value.__aenter__.return_value = mock_response
 
@@ -130,11 +130,11 @@ async def test_fetch_weather_warnings(client, tomorrow_date):
     with patch("aiohttp.ClientSession.get") as mock_get:
         mock_list_response = AsyncMock()
         mock_list_response.json.return_value = mock_file_list
-        mock_list_response.raise_for_status.return_value = None
+        mock_list_response.raise_for_status = MagicMock()
 
         mock_data_response = AsyncMock()
         mock_data_response.text.return_value = json.dumps(mock_warnings_data)
-        mock_data_response.raise_for_status.return_value = None
+        mock_data_response.raise_for_status = MagicMock()
 
         mock_get.return_value.__aenter__.side_effect = [mock_list_response, mock_data_response]
 
@@ -151,7 +151,7 @@ async def test_fetch_weather_warnings_empty(client):
     with patch("aiohttp.ClientSession.get") as mock_get:
         mock_response = AsyncMock()
         mock_response.json.return_value = []
-        mock_response.raise_for_status.return_value = None
+        mock_response.raise_for_status = MagicMock()
         mock_get.return_value.__aenter__.return_value = mock_response
 
         async with client:
@@ -177,7 +177,7 @@ async def test_fetch_hydro_stations(client):
         mock_response = AsyncMock()
         mock_response.json.return_value = mock_data
         mock_response.status = 200
-        mock_response.raise_for_status.return_value = None
+        mock_response.raise_for_status = MagicMock()
         mock_get.return_value.__aenter__.return_value = mock_response
 
         async with client:
@@ -201,7 +201,7 @@ async def test_fetch_hydro_station(client):
         mock_response = AsyncMock()
         mock_response.json.return_value = mock_data
         mock_response.status = 200
-        mock_response.raise_for_status.return_value = None
+        mock_response.raise_for_status = MagicMock()
         mock_get.return_value.__aenter__.return_value = mock_response
 
         async with client:
@@ -236,7 +236,7 @@ async def test_fetch_hydro_observation_data(client):
         mock_response = AsyncMock()
         mock_response.json.return_value = mock_data
         mock_response.status = 200
-        mock_response.raise_for_status.return_value = None
+        mock_response.raise_for_status = MagicMock()
         mock_get.return_value.__aenter__.return_value = mock_response
 
         async with client:
@@ -262,11 +262,50 @@ async def test_hydro_api_errors(client, method_name, args, status_code):
     with patch("aiohttp.ClientSession.get") as mock_get:
         mock_response = AsyncMock()
         mock_response.status = status_code
+        mock_response.raise_for_status = MagicMock()
         mock_get.return_value.__aenter__.return_value = mock_response
 
         with pytest.raises(Exception, match=f"API returned status {status_code}"):
             async with client:
                 method = getattr(client, method_name)
+                await method(*args)
+
+
+# Tests - Injected Session Error Handling
+@pytest.mark.parametrize(
+    "method_name,args",
+    [
+        ("fetch_forecast", ("lapės",)),
+        ("fetch_places", ()),
+    ],
+)
+@pytest.mark.asyncio
+async def test_injected_session_raises_for_http_error(method_name, args):
+    """A 500 must raise even when the session has no session-level raise_for_status.
+
+    This mirrors the Home Assistant scenario, where the shared aiohttp session is
+    injected via ``MeteoLtClient(session=...)`` and is created without
+    ``raise_for_status=True``. Errors must still propagate as ``aiohttp.ClientError``
+    instead of being parsed as payloads.
+    """
+    error = aiohttp.ClientResponseError(
+        request_info=AsyncMock(),
+        history=(),
+        status=500,
+        message="Internal Server Error",
+    )
+
+    async with aiohttp.ClientSession() as external_session:
+        client = MeteoLtClient(session=external_session)
+
+        with patch("aiohttp.ClientSession.get") as mock_get:
+            mock_response = AsyncMock()
+            mock_response.status = 500
+            mock_response.raise_for_status = MagicMock(side_effect=error)
+            mock_get.return_value.__aenter__.return_value = mock_response
+
+            method = getattr(client, method_name)
+            with pytest.raises(aiohttp.ClientResponseError):
                 await method(*args)
 
 

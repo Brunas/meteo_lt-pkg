@@ -1,3 +1,17 @@
+## Release 0.7.2
+
+Date: `2026-07-11`
+
+### Bug Fixes
+
+- **Raise for HTTP status per request** so error handling works with an injected `aiohttp` session, not only library-created ones
+  - Previously `raise_for_status=True` was only set on sessions the client created itself, so an externally injected session (e.g. Home Assistant's shared session) would parse 4xx/5xx bodies as payloads instead of raising `aiohttp.ClientError`
+  - Each fetch method now calls `response.raise_for_status()` on every request
+
+### Maintenance
+
+- Added Python 3.14 to the CI test matrix and bumped the devcontainer base image to `python:3.14-bookworm`
+
 ## Release 0.7.1
 
 Date: `2026-02-10`
