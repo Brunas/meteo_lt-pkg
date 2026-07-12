@@ -10,7 +10,7 @@ import aiohttp
 import pytest
 
 from meteo_lt.client import MeteoLtClient
-from meteo_lt.const import WARNINGS_URL
+from meteo_lt.const import TIMEOUT, WARNINGS_URL
 
 
 @pytest.fixture
@@ -258,14 +258,25 @@ async def test_fetch_hydro_observation_data(client):
 )
 @pytest.mark.asyncio
 async def test_hydro_api_errors(client, method_name, args, status_code):
-    """Test error handling for hydro API methods"""
+    """Test error handling for hydro API methods.
+
+    A non-2xx response must raise ``aiohttp.ClientResponseError`` via
+    ``raise_for_status()`` rather than falling through and returning ``None``.
+    """
+    error = aiohttp.ClientResponseError(
+        request_info=AsyncMock(),
+        history=(),
+        status=status_code,
+        message=f"API returned status {status_code}",
+    )
+
     with patch("aiohttp.ClientSession.get") as mock_get:
         mock_response = AsyncMock()
         mock_response.status = status_code
-        mock_response.raise_for_status = MagicMock()
+        mock_response.raise_for_status = MagicMock(side_effect=error)
         mock_get.return_value.__aenter__.return_value = mock_response
 
-        with pytest.raises(Exception, match=f"API returned status {status_code}"):
+        with pytest.raises(aiohttp.ClientResponseError):
             async with client:
                 method = getattr(client, method_name)
                 await method(*args)
@@ -307,6 +318,56 @@ async def test_injected_session_raises_for_http_error(method_name, args):
             method = getattr(client, method_name)
             with pytest.raises(aiohttp.ClientResponseError):
                 await method(*args)
+
+
+# Tests - Injected Session Per-Request Timeout
+@pytest.mark.parametrize(
+    "method_name,args,mock_json",
+    [
+        (
+            "fetch_forecast",
+            ("lapės",),
+            {
+                "place": {
+                    "code": "lapės",
+                    "name": "Lapės",
+                    "administrativeDivision": "Kauno rajono savivaldybė",
+                    "countryCode": "LT",
+                    "coordinates": {"latitude": 54.97371, "longitude": 24.00048},
+                },
+                "forecastCreationTimeUtc": "2024-01-01 12:00:00",
+                "forecastTimestamps": [],
+            },
+        ),
+        ("fetch_places", (), []),
+    ],
+)
+@pytest.mark.asyncio
+async def test_injected_session_carries_per_request_timeout(method_name, args, mock_json):
+    """Every request must carry ``ClientTimeout(total=TIMEOUT)`` even when the
+    injected session was created without a session-level timeout.
+
+    This mirrors the Home Assistant scenario, where the shared aiohttp session is
+    injected via ``MeteoLtClient(session=...)``. Without a per-request timeout a
+    stalled request would fall back to aiohttp's ~5 minute default and block setup.
+    """
+    async with aiohttp.ClientSession() as external_session:
+        client = MeteoLtClient(session=external_session)
+
+        with patch("aiohttp.ClientSession.get") as mock_get:
+            mock_response = AsyncMock()
+            mock_response.json.return_value = mock_json
+            mock_response.raise_for_status = MagicMock()
+            mock_response.encoding = "utf-8"
+            mock_get.return_value.__aenter__.return_value = mock_response
+
+            method = getattr(client, method_name)
+            await method(*args)
+
+            assert mock_get.call_count == 1
+            timeout = mock_get.call_args.kwargs["timeout"]
+            assert isinstance(timeout, aiohttp.ClientTimeout)
+            assert timeout.total == TIMEOUT
 
 
 # Tests - Session Management

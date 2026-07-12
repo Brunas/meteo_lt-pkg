@@ -1,3 +1,18 @@
+## Release 0.7.3
+
+Date: `2026-07-12`
+
+### Bug Fixes
+
+- **Per-request timeout on every request** so the configured `30s` timeout applies with an injected `aiohttp` session, not only library-created ones
+  - Previously `ClientTimeout(total=30)` was only set on sessions the client created itself, so an externally injected session (e.g. Home Assistant's shared session) would fall back to aiohttp's ~5 minute default, letting a stalled request block setup for minutes
+  - Every fetch method now passes `timeout=aiohttp.ClientTimeout(total=TIMEOUT)` on each request
+- **Non-2xx hydro responses now raise instead of returning `None`**: removed the dead `if status == 200` branch in the hydro methods (unreachable after `raise_for_status()`); a `2xx`-non-`200` response no longer falls through silently
+
+### Changes
+
+- **Consistent response encoding**: the second warnings request and hydro observation request now set `response.encoding = "utf-8"` like the other requests, so Lithuanian characters decode correctly
+
 ## Release 0.7.2
 
 Date: `2026-07-11`

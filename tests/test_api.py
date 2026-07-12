@@ -4,10 +4,11 @@
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import aiohttp
 import pytest
 
 from meteo_lt.api import MeteoLtAPI
-from meteo_lt.const import BASE_URL
+from meteo_lt.const import BASE_URL, TIMEOUT
 from meteo_lt.models import (
     Coordinates,
     Forecast,
@@ -113,7 +114,7 @@ async def test_session_injection():
 
     await api.fetch_places()
 
-    mock_session.get.assert_called_once_with(f"{BASE_URL}/places")
+    mock_session.get.assert_called_once_with(f"{BASE_URL}/places", timeout=aiohttp.ClientTimeout(total=TIMEOUT))
     assert len(api.places) == 1
     assert api.places[0].code == "test"
 
